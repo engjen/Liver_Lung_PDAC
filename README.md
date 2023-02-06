@@ -8,4 +8,4 @@ Analysis notebook [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/202
 
 Image data and large files to run the first part of the code can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
 
-This analysis is associated with the work [Ongoing Replication Stress Response and New Clonal T Cell Development Discriminate Between Liver and Lung Recurrence Sites and Patient Outcomes in Pancreatic Ductal Adenocarcinoma](https://www.biorxiv.org/content/10.1101/2022.05.04.490552v1)
+If utilizing images, data or code, please cite our work: [Ongoing Replication Stress Response and New Clonal T Cell Development Discriminate Between Liver and Lung Recurrence Sites and Patient Outcomes in Pancreatic Ductal Adenocarcinoma](https://www.biorxiv.org/content/10.1101/2022.05.04.490552v1)
