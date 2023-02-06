@@ -6,4 +6,6 @@ Analysis notebook [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/202
 1. Detect nuclear foci of replication stress markers pRPA, gH2AX and RAD51.
 2. Calculate mean foci per epithelial cell in primary PDAC tumors and link to organotropism (i.e. liver or lung metastasis)
 
-Image data and large files to run the first part of the code can be found [here](https://www.synapse.org/#!Synapse:syn51068471).
+Image data and large files to run the first part of the code can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
+
+This analysis is associated with the work [Ongoing Replication Stress Response and New Clonal T Cell Development Discriminate Between Liver and Lung Recurrence Sites and Patient Outcomes in Pancreatic Ductal Adenocarcinoma](https://www.biorxiv.org/content/10.1101/2022.05.04.490552v1)
