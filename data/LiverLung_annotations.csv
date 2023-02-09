@@ -1,0 +1,14 @@
+Sample_ID,Patient,pORG_Score,Cohort,pORG_binary,cDays_from_Diagnosis_to_FU,cVitalStatus
+1127,ST-00018955,0.39418104,liver_cohort,high,883,Alive
+1749,ST-00017804,-0.272650564,lung_cohort,low,1681,Dead
+6951,ST-00019367,-0.347236136,liver_cohort,low,391,Dead
+7080,ST-00019368,0.159776916,liver_cohort,low,499,Dead
+8049,ST-00016289,0.309111015,liver_cohort,high,406,Dead
+8122,ST-00020181,0.297855821,liver_cohort,high,403,Dead
+15475,ST-00017078,-0.149342907,liver_cohort,low,1678,Alive
+18268,ST-00017310,0.132697822,liver_cohort,low,1264,Dead
+19207,ST-00019598,0.058932682,lung_cohort,low,984,Alive
+232215,ST-00018269,0.456201473,liver_cohort,high,372,Dead
+248041,ST-00017440,-0.55649499,lung_cohort,low,192,Dead
+164354,ST-00015839,-0.620319841,lung_cohort,low,1104,Dead
+19234,ST-00017381,0.348395229,liver_cohort,high,1258,Dead
