@@ -5,6 +5,7 @@ Analysis notebook [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/202
 
 1. Detect nuclear foci of replication stress markers pRPA, gH2AX and RAD51.
 2. Calculate mean foci per epithelial cell in primary PDAC tumors and link to organotropism (i.e. liver or lung metastasis)
+3. Calculate fraction of multiplex IHC cell types per tissue and link to organotropism.
 
 Image data and large files to run the first part of the code can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
 
