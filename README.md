@@ -14,7 +14,7 @@ If utilizing images, data or code, please cite our work: [Ongoing Replication St
 
 ## Analysis environment
 
-To run the main analysis, installing python3/miniconda, and enter the following in the terminal to set up an `analysis` environment. 
+To run the main analysis, install [python3/miniconda](https://docs.conda.io/en/latest/miniconda.html) (installers for Windows, macOS and Linux), and enter the following in the terminal to set up an `analysis` environment. 
 
 `conda create -n analysis`
 
