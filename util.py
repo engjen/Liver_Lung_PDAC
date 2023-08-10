@@ -1,0 +1,1137 @@
+import os
+import itertools
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import seaborn as sns
+import math
+import re
+import warnings
+from scipy.stats import pearsonr
+import networkx as nx
+
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib import cm, gridspec
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
+mpl.rc('figure', max_open_warning = 0)
+
+import sklearn
+from sklearn.preprocessing import minmax_scale, scale, FunctionTransformer
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+import lifelines
+from lifelines import KaplanMeierFitter, CoxPHFitter
+from lifelines.statistics import multivariate_logrank_test
+from lifelines import exceptions
+warnings.filterwarnings("ignore",category = exceptions.ApproximationWarning)
+
+import scipy
+from scipy import stats
+from scipy.stats import entropy, norm
+from scipy.spatial import cKDTree
+
+import statsmodels
+from statsmodels.formula.api import ols
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+import statsmodels.api as sm
+
+
+import anndata
+from anndata import AnnData
+import plotly.express as px
+
+codedir = os.getcwd()
+
+
+def more_plots(adata,df_p,s_subtype,s_type,s_partition,s_cell,n_neighbors,resolution,z_score,linkage,
+               s_color_p='Platform',d_color_p = {'cycIF':'gold','IMC':'darkblue'},
+               savedir=f'{codedir}/20220222/Survival_Plots_Both',figsize=(7,6)):
+    #more plots
+    #color by platform/leiden
+    from matplotlib.pyplot import gcf
+    d_color = dict(zip(sorted(adata.obs.leiden.unique()),sns.color_palette()[0:len(adata.obs.leiden.unique())]))
+    
+    network_colors = df_p.leiden.astype('str').map(d_color)#
+    network_colors.name = 'cluster'
+    node_colors  = df_p.loc[:,s_color_p].astype('str').map(d_color_p)
+    network_node_colors = pd.DataFrame(node_colors).join(pd.DataFrame(network_colors))
+
+    g = sns.clustermap(df_p.loc[:,ls_col].dropna(),figsize=figsize,cmap='viridis',
+            row_colors=network_node_colors,method=linkage,dendrogram_ratio=0.16)
+    for label,color in d_color_p.items():
+        g.ax_col_dendrogram.bar(0, 0, color=color,label=label, linewidth=0)
+    l1 = g.ax_col_dendrogram.legend(loc="right", ncol=1,bbox_to_anchor=(-0.1, 0.72),bbox_transform=gcf().transFigure)
+    for label,color in d_color.items():
+        g.ax_row_dendrogram.bar(0, 0, color=color,label=label, linewidth=0)
+    l2 = g.ax_row_dendrogram.legend(loc="right", ncol=1,bbox_to_anchor=(-0.1, 0.5),bbox_transform=gcf().transFigure)
+    g.savefig(f'{savedir}/clustermap_PlatformandSubtype_{s_sample}_{s_type}_{s_partition}_{s_cell}_{s_type}_{n_neighbors}_{resolution}.png',dpi=200)
+
+    #subtypes' mean
+    d_replace = {}
+    df_plot = df_p.loc[:,ls_col.tolist()+['leiden']].dropna().groupby('leiden').mean()
+    df_plot.index.name = f'leiden {resolution}'
+    g = sns.clustermap(df_plot.dropna().T,z_score=z_score,figsize=(4,len(ls_col)*.25+1),cmap='viridis',vmin=-2,vmax=2,method='ward')
+    g.fig.suptitle(f'leiden {resolution}',x=.9) 
+    g.savefig(f'{savedir}/clustermap_subtypes_{s_sample}_{s_type}_{s_partition}_{s_cell}_{s_type}_{n_neighbors}_{resolution}.png',dpi=200)
+    marker_genes = df_plot.dropna().T.iloc[:,g.dendrogram_col.reordered_ind].columns.tolist()
+    categories_order = df_plot.dropna().T.iloc[g.dendrogram_row.reordered_ind,:].index.tolist()
+    #barplot
+    fig,ax=plt.subplots(figsize=(2.5,2.5),dpi=200)
+    df_p.groupby(['leiden','Platform','Subtype']).count().iloc[:,0].unstack().loc[marker_genes].plot(kind='barh',title='Patient Count',ax=ax)
+    plt.tight_layout()
+    fig.savefig(f'{savedir}/barplot_subtyping_{s_sample}_{s_type}_{s_partition}_{s_cell}_{s_type}_{n_neighbors}_{resolution}.png')
+
+def group_mean_diff(df_marker,s_group,s_marker):
+    lls_result = []
+    for s_test in df_marker.loc[:,s_group].dropna().unique():
+        ls_result = df_marker.loc[df_marker.loc[:,s_group] == s_test,s_marker].values
+        lls_result.append(ls_result)
+    if len(lls_result)==2:
+        try:
+            statistic, pvalue = stats.ttest_ind(lls_result[0],lls_result[1])
+        except:
+            print('error in ttest_inde')
+            pvalue = 1.0
+            statistic = None
+    elif len(lls_result) > 2:
+        try:
+            statistic, pvalue = stats.f_oneway(*lls_result,nan_policy='omit')
+        except:
+            print('error in f_oneway')
+            pvalue = 1.0
+            statistic = None
+    else:
+        pvalue = 1.0
+        statistic = None
+    return(statistic, pvalue)
+
+## find best cutpoint 
+def single_km(df_all,s_cell,s_subtype,s_plat,s_col,savedir,alpha=0.05,cutp=0.5,s_time='Survival_time',s_censor='Survival',s_propo='in'):
+    df_all.index = df_all.index.astype('str')
+    try:
+        df = df_all[(df_all.subtype==s_subtype)].copy() #(df_all.Platform==s_plat) &
+    except:
+        df = df_all.copy()
+    df = df.loc[:,[s_col,s_time,s_censor]].dropna()
+    if len(df) > 1:
+        #KM
+        i_cut = np.quantile(df.loc[:,s_col],cutp)
+        b_low = df.loc[:,s_col] <= i_cut
+        s_title1 = f'{s_col} {s_plat}'
+        s_title2 = f'{s_propo} {s_cell}'
+        if i_cut == 0:
+            b_low = df.loc[:,s_col] <= 0
+        df.loc[b_low,'abundance'] = 'low'
+        df.loc[~b_low,'abundance'] = 'high'
+        #log rank
+        
+        results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+                                            groups=df.abundance, event_observed=df.loc[:,s_censor])
+        pvalue = results.summary.p[0]
+        if np.isnan(pvalue):
+            print(f'{s_col}: pvalue is na')
+            pvalue = 1
+        if pvalue < alpha:
+            kmf = KaplanMeierFitter()
+            fig, ax = plt.subplots(figsize=(3,3),dpi=300)
+            for s_group in ['high','low']:
+                df_abun = df[df.abundance==s_group]
+                durations = df_abun.loc[:,s_time]
+                event_observed = df_abun.loc[:,s_censor]
+                try:
+                    kmf.fit(durations, event_observed,label=s_group)
+                    kmf.plot(ax=ax,ci_show=False,show_censors=True)
+                except:
+                    results.summary.p[0] = 1
+            s_pval = f'{results.summary.p[0]:.2}'
+            ax.set_title(f'{s_title1}\n{s_title2} {s_subtype}\np={s_pval} n={len(df)} [{len(df.loc[~b_low,:])}, {len(df.loc[b_low,:])}]',fontsize=10)
+            ax.set_xlabel(s_time)
+            ax.legend(loc='upper right')#,title=f'{len(df.loc[~b_low,:])}, {len(df.loc[b_low,:])}'
+            plt.tight_layout()
+            fig.savefig(f"{savedir}/Survival_Plots/KM_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}_{s_subtype}_{cutp}_{s_censor}_{s_pval}.png",dpi=300)
+            #plt.close(fig)
+    else:
+        print(f'{s_col}: too many nas')
+        df = pd.DataFrame(columns=[s_time,s_censor,'abundance'],index=[0],data=np.nan)
+        pvalue = 1
+    return(df, pvalue)
+
+warnings.filterwarnings("default",category = exceptions.ApproximationWarning)
+
+def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
+    cph = CoxPHFitter()  #penalizer=0.1
+    if df.columns.isin(['Stage']).any():
+        df.Stage = df.Stage.replace({'I':1,'II':2,'III':3,'IV':4})
+    cph.fit(df.dropna(), s_time, event_col=s_censor) 
+    fig, ax = plt.subplots(figsize=figsize,dpi=300)
+    cph.plot(ax=ax)
+    pvalue = cph.summary.p[s_multi]
+    ax.set_title(f'{s_multi}\np={pvalue:.2} n={(len(df.dropna()))}')
+    plt.tight_layout()
+    return(fig,cph)
+
+def km_plot(df,s_col,s_time,s_censor):
+    results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+                                    groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
+    kmf = KaplanMeierFitter()
+    fig, ax = plt.subplots(figsize=(4,4),dpi=300)
+    ls_order = sorted(df.loc[:,s_col].dropna().unique())
+    for s_group in ls_order:
+        print(s_group)
+        df_abun = df[df.loc[:,s_col]==s_group]
+        durations = df_abun.loc[:,s_time]
+        event_observed = df_abun.loc[:,s_censor]
+        kmf.fit(durations,event_observed,label=s_group)
+        kmf.plot(ax=ax,ci_show=True,show_censors=True)
+    ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
+    ax.set_ylim(-0.05,1.05)
+    return(fig,ls_order)
+
+def patient_heatmap(df_p,ls_col,ls_annot,figsize=(7,6),linkage='complete',
+                    ls_color=[mpl.cm.tab10.colors,mpl.cm.Set1.colors,mpl.cm.Set2.colors,mpl.cm.Set3.colors,mpl.cm.Paired.colors,mpl.cm.Pastel1.colors],
+                    z_score=0):
+    #more plots
+    #color by platform/leiden
+    from matplotlib.pyplot import gcf
+    
+    #
+    df_annot = pd.DataFrame()
+    dd_color = {}
+    for idx, s_annot in enumerate(ls_annot):
+        color_palette = ls_color[idx]
+        d_color = dict(zip(sorted(df_p.loc[:,s_annot].dropna().unique()),color_palette[0:len(df_p.loc[:,s_annot].dropna().unique())]))
+        network_colors = df_p.loc[:,s_annot].map(d_color) 
+        df_annot[s_annot] = pd.DataFrame(network_colors)
+        dd_color.update({s_annot:d_color})
+    try:
+        g = sns.clustermap(df_p.loc[:,ls_col],figsize=figsize,cmap='viridis',z_score=z_score,
+            row_colors=df_annot,method=linkage,dendrogram_ratio=0.16,xticklabels=1,yticklabels=1,
+            cbar_kws= {'orientation':'vertical','anchor':(1,0),
+                       'aspect':10,'fraction':.05,'shrink':3
+                      })
+        for idx, (s_annot, d_color) in enumerate(dd_color.items()):
+            g.ax_col_dendrogram.bar(0, 0, color='w',label=' ', linewidth=0)
+            for label,color in d_color.items():
+                g.ax_col_dendrogram.bar(0, 0, color=color,label=label, linewidth=0)
+        
+        l1 = g.ax_col_dendrogram.legend(loc="right", ncol=1,bbox_to_anchor=(0, 0.7),bbox_transform=gcf().transFigure)
+    except:
+        print('clustermap error')
+        g= df_p.loc[:,ls_col].dropna(how='any')
+    return(g,df_annot)
+    #g.savefig(f'{savedir}/clustermap_PlatformandSubtype_{s_sample}_{s_type}_{s_partition}_{s_cell}_{s_type}_{n_neighbors}_{resolution}.png',dpi=200)
+
+    
+#functions
+
+import matplotlib
+def df_from_mcomp(m_comp):
+    df_test = pd.DataFrame.from_records(m_comp.summary().data,coerce_float=True)
+    df_test.columns=df_test.loc[0].astype('str')
+    df_test.drop(0,inplace=True)
+    df_test =df_test.apply(pd.to_numeric, errors='ignore')
+    ls_order = (pd.concat([df_test.group1,df_test.group2])).unique()
+    return(df_test, ls_order)
+def plt_sig(df_test,ax,ax_factor=5):
+    ls_order = pd.concat([df_test.group1,df_test.group2]).unique()
+    props = {'connectionstyle':matplotlib.patches.ConnectionStyle.Bar(armA=0.0, armB=0.0, fraction=0.0, angle=None),
+             'arrowstyle':'-','linewidth':.5}
+    #draw on axes
+    y_lim = ax.get_ylim()[1]
+    y_lim_min = ax.get_ylim()[0]
+    y_diff = y_lim-y_lim_min
+    for count, s_index in enumerate(df_test[df_test.reject].index):
+        text =f"p = {df_test.loc[s_index,'p-adj']:.1}"
+        #text = "*"
+        one = df_test.loc[s_index,'group1']
+        two = df_test.loc[s_index,'group2']
+        x_one = np.argwhere(ls_order == one)[0][0]
+        x_two = np.argwhere(ls_order == two)[0][0]
+        ax.annotate(text, xy=(np.mean([x_one,x_two]),y_lim - (y_diff+count)/ax_factor),fontsize=6)
+        ax.annotate('', xy=(x_one,y_lim - (y_diff+count)/ax_factor), xytext=(x_two,y_lim - (y_diff+count)/ax_factor), arrowprops=props)
+        #break
+    return(ax)
+def post_hoc(confusion_matrix):
+    chi2, pvalue, dof, expected  = stats.chi2_contingency(confusion_matrix)
+    observed_vals = confusion_matrix
+    expected_vals = pd.DataFrame(expected,index=confusion_matrix.index,columns=confusion_matrix.columns)
+    result_val = pd.DataFrame(data='',index=confusion_matrix.index,columns=confusion_matrix.columns)
+    col_sum = observed_vals.sum(axis=1)
+    row_sum = observed_vals.sum(axis=0)
+
+    for indx in confusion_matrix.index:
+        for cols in confusion_matrix.columns:
+            observed = float(observed_vals.loc[indx,cols])
+            expected = float(expected_vals.loc[indx,cols])
+            col_total = float(col_sum[indx])
+            row_total = float(row_sum[cols])
+            expected_row_prop = expected/row_total
+            expected_col_prop = expected/col_total
+            std_resid = (observed - expected) / (math.sqrt(expected * (1-expected_row_prop) * (1-expected_col_prop)))
+            p_val = norm.sf(abs(std_resid))
+            if p_val < 0.05/(len(confusion_matrix.index)*len(confusion_matrix.columns)):
+                print(indx,cols, "***", p_val)
+                result_val.loc[indx,cols] = '***'
+            elif p_val < 0.05:
+                print (indx,cols, '*', p_val)
+                result_val.loc[indx,cols] = '*'
+            else:
+                print (indx,cols, 'not sig', p_val)
+    print('cutoff')
+    print(0.05/(len(confusion_matrix.index)*len(confusion_matrix.columns)))
+    return(result_val)
+
+def single_var_km_cph(df_all,df_surv,s_subtype,s_platform,s_cell,alpha=0.05,min_cutoff=0.003,savedir=f"/home/groups/graylab_share/OMERO.rdsStore/engje/Data/20200000/20200406_JP-TMAs/20220408/Survival_Plots"):
+    df_all.index = df_all.index.astype('str')
+    df_surv.index = df_surv.index.astype('str')
+    df_all = df_all.merge(df_surv.loc[:,['Survival','Survival_time','subtype','Platform']],left_index=True,right_index=True)
+    if s_platform == 'IMC':
+        df = df_all[(df_all.Platform==s_platform) & (~df_all.index.str.contains('Z')) & (df_all.subtype==s_subtype)].copy()
+    elif s_platform == 'cycIF':
+        df = df_all[(df_all.Platform==s_platform) & (~df_all.index.str.contains('JP-TMA2')) & (df_all.subtype==s_subtype)].copy()
+    else:
+        df = df_all[(df_all.Platform==s_platform) & (df_all.subtype==s_subtype)].copy()
+    df = df.dropna() #df.dropna(axis=1).dropna()
+    #KM
+    for s_col in df.columns.drop(['Survival','Survival_time','subtype','Platform']):
+        b_low = df.loc[:,s_col] <= df.loc[:,s_col].median()
+        s_title1 = f'{s_subtype} {s_platform}'
+        s_title2 = f'{s_cell} {s_col.replace(".","")}'
+        if df.loc[:,s_col].median() < min_cutoff:
+            continue
+        elif len(df) < 1:
+            continue
+        df.loc[b_low,'abundance'] = 'low'
+        df.loc[~b_low,'abundance'] = 'high'
+        #log rank
+        results = multivariate_logrank_test(event_durations=df.Survival_time,
+                                            groups=df.abundance, event_observed=df.Survival)
+        if results.summary.p[0] < alpha:
+            print(s_col)
+            #kaplan meier plotting
+            kmf = KaplanMeierFitter()
+            fig, ax = plt.subplots(figsize=(3,3),dpi=300)
+            for s_group in ['high','low']:
+                df_abun = df[df.abundance==s_group]
+                durations = df_abun.Survival_time
+                event_observed = df_abun.Survival
+                try:
+                    kmf.fit(durations, event_observed,label=s_group)
+                    kmf.plot(ax=ax,ci_show=False,show_censors=True)
+                except:
+                    print('.')
+            ax.set_title(f'{s_title1}\n{s_title2}\np={results.summary.p[0]:.2} (n={len(df)})',fontsize=10)
+            ax.legend(loc='upper right',title=f'{df.loc[:,s_col].median():.2}')
+            plt.tight_layout()
+            fig.savefig(f"{savedir}/KM_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}.png",dpi=300)
+        #CPH
+        cph2 = CoxPHFitter(penalizer=0.1)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            try:
+                cph2.fit(df.loc[:,[s_col,'Survival_time','Survival']], duration_col='Survival_time', event_col='Survival')
+                if cph2.summary.p[0] < alpha:
+                    print(s_col)
+                    fig, ax = plt.subplots(figsize=(2.5,2),dpi=300)
+                    cph2.plot(ax=ax)
+                    ax.set_title(f'{s_title1} (n={len(df)})\n{s_title2}\np={cph2.summary.p[0]:.2} ({df.loc[:,s_col].median():.2})',fontsize=10)
+                    ax.set_ylabel(f'{s_col}')
+                    ax.set_yticklabels([])
+                    plt.tight_layout()
+                    fig.savefig(f"{savedir}/CPH_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}.png",dpi=300)
+            except:
+                print(f'skipped {s_col}')   
+    return(df)
+
+
+                
+def make_adata(df,ls_col,n_neighbors):
+    print('making adata')
+    adata = sc.AnnData(df.loc[:,ls_col].fillna(0))
+    adata.raw = adata
+    #reduce dimensionality
+    sc.tl.pca(adata, svd_solver='auto')
+    print('scaling')
+    sc.pp.scale(adata, zero_center=False, max_value=20)
+    print('calc umap')
+    # calculate neighbors 
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors) 
+    sc.tl.umap(adata)
+    return(adata)
+
+def km_cph(df_st):
+    print(len(df_st)) 
+    T = df_st['Survival_time']     ## time to event
+    E = df_st['Survival']      ## event occurred or censored
+    groups = df_st.loc[:,'leiden'] 
+    kmf1 = KaplanMeierFitter() ## instantiate the class to create an object
+    fig1, ax1 = plt.subplots(figsize=(3,3),dpi=200)
+    for idx, s_group in enumerate(sorted(df_st.leiden.unique())):
+        i1 = (groups == s_group)
+        if sum(i1) > 0:
+            kmf1.fit(T[i1], E[i1], label=s_group)    ## fit thedata
+            kmf1.plot(ax=ax1,ci_show=False,color=mpl.cm.Set1.colors[idx],show_censors=True)
+            print(f'{s_group}: {kmf1.median_survival_time_}, ({i1.sum()})') #{kmf1.percentile(.75)} 
+    results = multivariate_logrank_test(event_durations=T, groups=groups, event_observed=E)
+    p1=results.summary.p[0]
+    ax1.set_title(f'p={p1:.2}')
+    #CPH
+    df_dummy = pd.get_dummies(df_st.loc[:,['Survival_time','Survival','leiden']])
+    df_dummy = df_dummy.loc[:,df_dummy.sum() != 0]
+    cph = CoxPHFitter(penalizer=0.1)  ## Instantiate the class to create a cph object
+    cph.fit(df_dummy, 'Survival_time', event_col='Survival')
+    fig2, ax2 = plt.subplots(figsize=(2.5,3),dpi=200)
+    cph.plot(ax=ax2)
+    p2 = cph.summary.loc[:,'p'].min()
+    ax2.set_title(f'p={p2:.2}')
+    return(fig1, p1, fig2, p2)
+
+def make_adata_old(df, ls_col,df_surv, n_neighbors, s_subtype, s_type, s_partition, s_cell,ncols=4):
+    print('making adata')
+    adata = sc.AnnData(df.loc[:,ls_col].fillna(0))
+    adata.raw = adata
+    #reduce dimensionality
+    sc.tl.pca(adata, svd_solver='auto')
+    print('scaling')
+    sc.pp.scale(adata, zero_center=False, max_value=20)
+    print('calc umap')
+    # calculate neighbors 
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors) 
+    sc.tl.umap(adata)
+    #color by markers   
+    figname = f"Umapboth_markers_{s_subtype}_{s_type}_{s_partition}_{s_cell}_{n_neighbors}neigh.png"
+    title=figname.split('.png')[0].replace('_',' ')
+    sc.pl.umap(adata, color=ls_col,vmin='p1.5',vmax='p99.5',ncols=ncols,save=figname,size=250)
+    #platform
+    adata.obs['Platform'] = adata.obs.index.astype('str').map(dict(zip(df_surv.index.astype('str'),df_surv.Platform)))
+    figname = f"Umapboth_Platform_{s_subtype}_{s_type}_{s_partition}_{s_cell}_{n_neighbors}neigh.png"
+    title=figname.split('.png')[0].replace('_',' ')
+    sc.pl.umap(adata, color='Platform',save=figname,size=250)
+    #subtype
+    adata.obs['subtype'] = adata.obs.index.astype('str').map(dict(zip(df_surv.index.astype('str'),df_surv.subtype)))
+    #CAREFUL
+    adata.obs['subtype'] = adata.obs['subtype'].fillna('TNBC')
+    figname = f"Umapboth_subtype_{s_subtype}_{s_type}_{s_partition}_{s_cell}_{n_neighbors}neigh.png"
+    title=figname.split('.png')[0].replace('_',' ')
+    sc.pl.umap(adata, color='subtype',save=figname,size=250)
+    return(adata)
+def cluster_leiden_old(adata, resolution,n_neighbors, s_subtype, s_type, s_partition, s_cell):
+    sc.tl.leiden(adata,resolution=resolution)
+    fig,ax = plt.subplots(figsize=(2.5,2),dpi=200)
+    figname=f'both_{s_subtype}_{s_partition}_{s_cell}_{n_neighbors}_{resolution}.png'
+    sc.pl.umap(adata, color='leiden',ax=ax,title=figname.split('.png')[0].replace('_',' '),wspace=.25,save=figname,size=40)
+    return(adata)
+def km_cph_old(adata,df_surv,s_subtype,s_plat,s_type,s_partition,s_cell,savedir=f'{codedir}/20220222/Survival_Plots_Both'):
+    if type(adata) == anndata._core.anndata.AnnData:
+        df_p = pd.DataFrame(data=adata.raw.X, index=adata.obs.index, columns=adata.var.index) #adata.to_df()
+        df_p['Subtype'] = adata.obs.subtype
+        df_p['leiden'] = adata.obs.leiden
+        df_p['Platform'] = adata.obs.Platform
+    else:
+        df_p = adata
+    df_p.index = df_p.index.astype('str')
+    df_p['Survival'] = df_p.index.map(dict(zip(df_surv.index,df_surv.Survival)))
+    df_p['Survival_time'] = df_p.index.map(dict(zip(df_surv.index,df_surv.Survival_time)))
+    df_st = df_p[(df_p.Subtype==s_subtype)].dropna()
+    if s_plat != 'Both':
+        df_st = df_p[(df_p.Platform==s_plat) & (df_p.Subtype==s_subtype)].dropna()
+    if not len(df_st) < 1:
+        
+        print(len(df_st)) 
+        T = df_st['Survival_time']     ## time to event
+        E = df_st['Survival']      ## event occurred or censored
+        groups = df_st.loc[:,'leiden'] 
+        kmf1 = KaplanMeierFitter() ## instantiate the class to create an object
+        fig, ax = plt.subplots(figsize=(3,3),dpi=200)
+        for idx, s_group in enumerate(sorted(df_p.leiden.unique())):
+            i1 = (groups == s_group)
+            if sum(i1) > 0:
+                kmf1.fit(T[i1], E[i1], label=s_group)    ## fit thedata
+                kmf1.plot(ax=ax,ci_show=False,color=f'C{idx}',show_censors=True)
+                print(f'{s_group}: {kmf1.median_survival_time_}, {kmf1.percentile(.75)} ({i1.sum()})')
+        results = multivariate_logrank_test(event_durations=T, groups=groups, event_observed=E)
+        ax.set_title(f'{s_subtype} {s_plat} {s_cell} \nk={resolution}  p={results.summary.p[0]:.1} n={len(df_st)}')
+        ax.legend(loc='upper right')
+        ax.set_ylim(-0.05,1.05)
+        plt.tight_layout()
+        fig.savefig(f'{savedir}/KM_{s_subtype}_{s_plat}_{s_type}_{s_partition}_{s_cell}_{n_neighbors}_{resolution}.png',dpi=300)
+        #CPH
+        df_dummy = pd.get_dummies(df_st.loc[:,['Survival_time','Survival','leiden']])
+        df_dummy = df_dummy.loc[:,df_dummy.sum() != 0]
+        cph = CoxPHFitter(penalizer=0.1)  ## Instantiate the class to create a cph object
+        cph.fit(df_dummy, 'Survival_time', event_col='Survival')
+        fig, ax = plt.subplots(figsize=(2.5,3),dpi=200)
+        cph.plot(ax=ax)
+        pvalue = cph.summary.loc[:,'p'].min()
+        ax.set_title(f'CPH: {s_subtype} {s_plat} {s_cell}\np={pvalue:.2}')
+        plt.tight_layout()
+        fig.savefig(f'{savedir}/CoxPH_{s_subtype}_{s_plat}_{s_type}_{s_partition}_{s_cell}_{n_neighbors}_{resolution}.png',dpi=300)
+    else:
+        cph = 'zero'
+    return(df_p, cph)
+
+def km_cph_entropy(df_p,df,ls_col,s_subtype,s_plat,s_cell,savedir=f'{codedir}/20220222/Survival_Plots_Both'):
+    df_p['entropy'] = entropy(df_p.loc[:,df_p.columns[df_p.dtypes=='float32']].fillna(0),axis=1,base=2)
+    df_st = df_p[(df_p.Subtype==s_subtype)].dropna()
+    if s_plat != 'Both':
+        df_st = df_p[(df_p.Platform==s_plat) & (df_p.Subtype==s_subtype)].dropna()
+    #######3 Entropy
+    s_col = 'entropy'
+    # no df and ls_col variable
+    df_st = df.loc[:,ls_col].merge(df_st.loc[:,['Subtype','Platform','Survival','Survival_time','entropy']],left_index=True,right_index=True)
+    if not len(df_st) < 1:
+        b_low = df_st.loc[:,s_col] <= df_st.loc[:,s_col].median()
+        if df_st.loc[:,s_col].median() == 0:
+            b_low = df.loc[:,s_col] <= 0
+        df_st.loc[b_low,'abundance'] = 'low'
+        df_st.loc[~b_low,'abundance'] = 'high'
+        kmf = KaplanMeierFitter()
+        results = multivariate_logrank_test(event_durations=df_st.Survival_time, groups=df_st.abundance, event_observed=df_st.Survival)
+        print(f'entropy {results.summary.p[0]}')
+        if results.summary.p[0] < 0.2:
+            fig, ax = plt.subplots(figsize=(3,3),dpi=200)
+            for s_group in ['high','low']:
+                    df_abun = df_st[df_st.abundance==s_group]
+                    durations = df_abun.Survival_time
+                    event_observed = df_abun.Survival
+                    kmf.fit(durations, event_observed,label=s_group)
+                    kmf.plot(ax=ax,ci_show=False,show_censors=True)
+            s_title1 = f'{s_subtype} {s_plat}'
+            s_title2 = f'{s_cell} {s_col}'
+            ax.set_title(f'{s_title1}\n{s_title2}\np={results.summary.p[0]:.2}',fontsize=10)
+            ax.legend(loc='upper right')
+            plt.tight_layout()
+            fig.savefig(f"{savedir}/KM_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}.png",dpi=300)
+            cph = CoxPHFitter(penalizer=0.1)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                try:
+                    cph.fit(df_st.loc[:,[s_col,'Survival','Survival_time']], duration_col='Survival_time', event_col='Survival')
+                    if cph.summary.p[0] < 0.1:
+                        print(s_col)
+                        fig, ax = plt.subplots(figsize=(2.5,2),dpi=200)
+                        cph.plot(ax=ax)
+                        s_title1 = f'{s_subtype} {s_plat}'
+                        s_title2 = f'{s_cell} {s_col}'
+                        ax.set_title(f'{s_title1}\n{s_title2}\np={cph.summary.p[0]:.2}',fontsize=10)
+                        plt.tight_layout()
+                        fig.savefig(f"{savedir}/CPH_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}.png",dpi=300)
+                except:
+                    print(f'skipped {s_col}')   
+
+
+def group_median_diff(df_marker,s_group,s_marker):
+    lls_result = []
+    for s_test in df_marker.loc[:,s_group].unique():
+        ls_result = df_marker.loc[df_marker.loc[:,s_group] == s_test,s_marker].values
+        lls_result.append(ls_result)
+    if len(lls_result)==2:
+        try:
+            statistic, pvalue = stats.mannwhitneyu(lls_result[0],lls_result[1])
+        except:
+            pvalue = 1
+            statistic = None
+    elif len(lls_result) > 2:
+        try:
+            statistic, pvalue = stats.kruskal(*lls_result,nan_policy='omit')
+        except:
+            pvalue = 1
+            statistic = None
+    else:
+        pvalue = None
+        statistic = None
+    #print(pvalue)
+    return(statistic,pvalue)
+
+
+#functions
+def silheatmap(adata,clust,marker_list,sil_key):
+    cluster_list = [str(item) for item in adata.uns[f'dendrogram_{clust}']['categories_ordered']]
+    #dataframe
+    df = adata.to_df()
+    df[clust] = adata.obs[clust]
+    #sort by sil
+    df[sil_key] = adata.obs[sil_key]
+    df = df.sort_values(by=sil_key)
+    #sort by cluster, markers
+    df['old_index'] = df.index
+    obs_tidy = df.set_index(clust)
+    obs_tidy.index = obs_tidy.index.astype('str')
+    obs_tidy = obs_tidy.loc[cluster_list,:]
+    df = df.loc[obs_tidy.old_index]
+    obs_tidy = obs_tidy.loc[:,marker_list]
+    #scale
+    obs_tidy = pd.DataFrame(data=minmax_scale(obs_tidy),index=obs_tidy.index,columns=obs_tidy.columns)
+    # define a layout of 3 rows x 3 columns
+    # The first row is for the dendrogram (if not dendrogram height is zero)
+    # second row is for main content. This col is divided into three axes:
+    #   first ax is for the heatmap
+    #   second ax is for 'brackets' if any (othwerise width is zero)
+    #   third ax is for colorbar
+    colorbar_width = 0.2
+    var_names = marker_list
+    width = 10
+    dendro_height = 0.8 #if dendrogram else 0
+    groupby_height = 0.13 #if categorical else 0
+    heatmap_height = len(var_names) * 0.18 + 1.5
+    height = heatmap_height + dendro_height + groupby_height + groupby_height
+    height_ratios = [dendro_height, heatmap_height, groupby_height,groupby_height]
+    width_ratios = [width, 0, colorbar_width, colorbar_width]
+    fig = plt.figure(figsize=(width, height),dpi=200)
+    axs = gridspec.GridSpec(
+        nrows=4,
+        ncols=4,
+        wspace=1 / width,
+        hspace=0.3 / height,
+        width_ratios=width_ratios,
+        height_ratios=height_ratios,
+    )
+    norm = mpl.colors.Normalize(vmin=0, vmax=1, clip=False)
+    norm2 = mpl.colors.Normalize(vmin=-1, vmax=1, clip=False)
+
+    # plot heatmap
+    heatmap_ax = fig.add_subplot(axs[1, 0])
+    im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto',norm=norm,interpolation='nearest') # ,interpolation='nearest'
+    heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] - 0.5)
+    heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
+    heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
+    heatmap_ax.set_xlabel('')
+    heatmap_ax.grid(False)
+    heatmap_ax.tick_params(axis='y', labelsize='small', length=1)
+    heatmap_ax.set_yticks(np.arange(len(var_names)))
+    heatmap_ax.set_yticklabels(var_names, rotation=0)
+
+    #colors
+    value_sum = 0
+    ticks = []  # list of centered position of the labels
+    labels = []
+    label2code = {}  # dictionary of numerical values asigned to each label
+    for code, (label, value) in enumerate(
+            obs_tidy.index.value_counts().loc[cluster_list].iteritems()
+        ):
+            ticks.append(value_sum + (value / 2))
+            labels.append(label)
+            value_sum += value
+            label2code[label] = code
+
+    groupby_cmap = mpl.colors.ListedColormap(adata.uns[f'{clust}_colors'])
+    groupby_ax = fig.add_subplot(axs[3, 0])
+    groupby_ax.imshow(
+                np.array([[label2code[lab] for lab in obs_tidy.index]]),
+                aspect='auto',
+                cmap=groupby_cmap,
+            )
+    groupby_ax.grid(False)
+    groupby_ax.yaxis.set_ticks([])
+    groupby_ax.set_xticks(ticks,labels,fontsize='xx-small',rotation=90)
+    groupby_ax.set_ylabel('Cluster',fontsize='x-small',rotation=0,ha='right',va='center')
+
+
+    #sil
+    sil_ax = fig.add_subplot(axs[2, 0])
+    #max_index = df[sil_key].idxmax()    #df.loc[max_index,sil_key] = 1    #min_index = df[sil_key].idxmin()    #df.loc[min_index,sil_key] = -1 #not needed
+    a=np.array([df[sil_key]]) #f'{clust}_silhuette'
+    a_tile = np.tile(a,(int(len(df)/80),1))
+    sil_ax.imshow(a_tile,cmap='bwr',norm=norm2)
+    sil_ax.xaxis.set_ticks([])
+    sil_ax.yaxis.set_ticks([])
+    sil_ax.set_ylabel('Silhouette',fontsize='x-small',rotation=0,ha='right',va='center')
+    sil_ax.grid(False)
+
+    #dendrogram
+    dendro_ax = fig.add_subplot(axs[0, 0], sharex=heatmap_ax)
+    #_plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram,ticks=ticks, orientation='top', )
+    dendro_info = adata.uns[f'dendrogram_{clust}']['dendrogram_info']
+    leaves = dendro_info["ivl"]
+    icoord = np.array(dendro_info['icoord'])
+    dcoord = np.array(dendro_info['dcoord'])
+    orig_ticks = np.arange(5, len(leaves) * 10 + 5, 10).astype(float)
+    for xs, ys in zip(icoord, dcoord):
+        if ticks is not None:
+            xs = translate_pos(xs, ticks, orig_ticks)
+        dendro_ax.plot(xs, ys, color='#555555')
+    dendro_ax.tick_params(bottom=False, top=False, left=False, right=False)
+    ticks = ticks if ticks is not None else orig_ticks
+    dendro_ax.set_xticks(ticks)
+    #dendro_ax.set_xticklabels(leaves, fontsize='small', rotation=90)
+    dendro_ax.set_xticklabels([])
+    dendro_ax.tick_params(labelleft=False, labelright=False)
+    dendro_ax.grid(False)
+    dendro_ax.spines['right'].set_visible(False)
+    dendro_ax.spines['top'].set_visible(False)
+    dendro_ax.spines['left'].set_visible(False)
+    dendro_ax.spines['bottom'].set_visible(False)
+
+    # plot colorbar
+    cbar_ax = fig.add_subplot(axs[1, 2])
+    mappable = mpl.cm.ScalarMappable(norm=norm, cmap='viridis')
+    cbar = plt.colorbar(mappable=mappable, cax=cbar_ax)
+    cbar_ax.tick_params(axis='both', which='major', labelsize='xx-small',rotation=90,length=.1)
+    cbar_ax.yaxis.set_major_locator(mpl.ticker.FixedLocator(locs=[0,1]))
+    cbar.set_label('Expression', fontsize='xx-small',labelpad=-5)
+
+    # plot colorbar2
+    cbar_ax = fig.add_subplot(axs[1, 3])
+    mappable = mpl.cm.ScalarMappable(norm=norm2, cmap='bwr')
+    cbar = plt.colorbar(mappable=mappable, cax=cbar_ax)
+    cbar_ax.tick_params(axis='both', which='major', labelsize='xx-small',rotation=90,length=.1)
+    cbar_ax.yaxis.set_major_locator(mpl.ticker.FixedLocator(locs=[-1,0,1]))
+    cbar.set_label('Silhouette Score', fontsize='xx-small',labelpad=0)
+
+    #return dict
+    return_ax_dict = {'heatmap_ax': heatmap_ax}
+    return_ax_dict['groupby_ax'] = groupby_ax
+    return_ax_dict['dendrogram_ax'] = dendro_ax
+    return(fig)
+
+def translate_pos(pos_list, new_ticks, old_ticks):
+    """
+    transforms the dendrogram coordinates to a given new position.
+    """
+    # of given coordinates.
+
+    if not isinstance(old_ticks, list):
+        # assume that the list is a numpy array
+        old_ticks = old_ticks.tolist()
+    new_xs = []
+    for x_val in pos_list:
+        if x_val in old_ticks:
+            new_x_val = new_ticks[old_ticks.index(x_val)]
+        else:
+            # find smaller and bigger indices
+            idx_next = np.searchsorted(old_ticks, x_val, side="left")
+            idx_prev = idx_next - 1
+            old_min = old_ticks[idx_prev]
+            old_max = old_ticks[idx_next]
+            new_min = new_ticks[idx_prev]
+            new_max = new_ticks[idx_next]
+            new_x_val = ((x_val - old_min) / (old_max - old_min)) * (
+                new_max - new_min
+            ) + new_min
+        new_xs.append(new_x_val)
+    return new_xs
+
+#functions
+
+# count the neighbors.
+class NeighborsCounter:
+
+    def __init__(self, rad, xy=['CentroidX', 'CentroidY']):
+        self.rad = rad
+        self.xy = xy
+
+    def query_balltree_vanilla(self, coords_np):
+        """
+        input coords_np:
+            these are coordinates. possible shape: (N,2)
+
+        output neighbor_indices:
+            this is a list of lists.
+            there is one list per row in coords_np (i.e. there are N)
+            the i'th list contains the indices of the neighbors of i,
+            not including itself.
+        """
+        n_points = coords_np.shape[0]
+        print(f'Counting neighbors for {n_points} points.')
+
+        tree = cKDTree(coords_np)
+        neighbor_indices = tree.query_ball_tree(tree, self.rad)
+        for i in range(n_points):
+            neighbor_indices[i].remove(i)
+        return neighbor_indices
+
+    def run(self, dataframe):
+        """
+        Splits the input dataframe into cell types and coordinates
+        Runs query_balltree_vanilla on the coordinates
+        Uses the neighbor indices to get cell type neighbor counts.
+
+        Input:
+            a dataframe with boolean cell type columns and coordinate columns
+            the coordinate columns by default are named ['CentroidX', 'CentroidY']
+            (coordinate column names are stored in attribute self.xy)
+
+        Output:
+            a dataframe with the same shape and index as the input dataframe.
+        """
+
+        types = [c for c in dataframe.columns if c not in self.xy]
+        #why do we have to do this?
+        types.remove('slide')
+        g = self.query_balltree_vanilla(dataframe[self.xy].to_numpy())
+        counts = np.zeros((len(g), len(types)))
+        df_arra = dataframe[types].to_numpy()
+
+        #return(counts)
+        
+        for n in range(dataframe.shape[0]):
+            idx = np.array(g[n])
+            if idx.size:
+                counts[n, :] = df_arra[idx, :].sum(axis=0)
+
+        return pd.DataFrame(counts, index=dataframe.index, columns=types)
+        
+
+def plot_sil(d_sil,s_name='Tumor'):
+    import matplotlib.pyplot as plt
+    fig,ax = plt.subplots(dpi=200)
+    pd.Series(d_sil).plot(ax=ax)
+    ax.set_title(f'{s_name}: Mean Silhoutte Scores')
+    ax.set_xlabel('k')
+    plt.tight_layout()
+    fig.savefig(f'{s_name}_Silhouette.png')
+    
+def single_km_cat(df_all,s_col,savedir,alpha=0.05,s_time='Survival_time',s_censor='Survival'):
+    df_all.index = df_all.index.astype('str')
+    df = df_all.copy()
+    df = df.loc[:,[s_col,s_time,s_censor]].dropna()
+    if len(df) > 0:
+        #log rank
+        results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+                                            groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])
+        #kaplan meier plotting
+        if results.summary.p[0] < alpha:
+            kmf = KaplanMeierFitter()
+            fig, ax = plt.subplots(figsize=(3,3),dpi=300)
+            for s_group in df.loc[:,s_col].unique():
+                df_abun = df[df.loc[:,s_col]==s_group]
+                durations = df_abun.loc[:,s_time]
+                event_observed = df_abun.loc[:,s_censor]
+                try:
+                    kmf.fit(durations, event_observed,label=s_group)
+                    kmf.plot(ax=ax,ci_show=False,show_censors=True)
+                except:
+                    results.summary.p[0] = 1
+            s_title1 = f'{s_col}'
+            ax.set_title(f'{s_title1}\np={results.summary.p[0]:.2} (n={len(df)})',fontsize=10)
+            ax.set_xlabel(s_time)
+            ax.legend(loc='upper right')
+            plt.tight_layout()
+            fig.savefig(f"{savedir}/Survival_Plots/KM_{s_title1.replace(' ','_')}_{s_censor}.png",dpi=300)
+        return(df)
+
+def add_patient_results(df_file, s_file,s_sample):
+    if s_file.find(f'results_{s_sample}_GatedCellTypes') > -1:
+        s_type = 'GatedCellTypes'
+        s_subtype = s_file.split('.csv')[0].split('_')[-1]
+        s_partition = 'gating'
+        s_cell = s_file.split('.csv')[0].split('_')[-2].split('by')[1]
+    elif s_file.find(f'results_{s_sample}_LeidenClustering_') > -1:
+        s_type = 'LeidenClustering'
+        s_subtype = s_file.split('.csv')[0].split('_')[-1]
+        s_partition = s_file.split('.csv')[0].split('_')[-3].split('by')[1]
+        s_cell = s_file.split('.csv')[0].split('_')[-2].split('in')[1]   
+    elif s_file.find(f'results_{s_sample}_Abundance_') > -1:
+        s_type = 'Abundance'
+        s_subtype = s_file.split('.csv')[0].split('_')[-1]
+        s_partition = s_file.split('.csv')[0].split('_')[-3].split('by')[1]
+        s_cell = s_file.split('.csv')[0].split('_')[-2].split('in')[1]   
+    elif s_file.find(f'results_{s_sample}_BGSubtractedMeanIntensity') > -1:
+        s_type = 'MeanIntensity'
+        s_subtype = s_file.split('.csv')[0].split('_')[-1]
+        s_partition = s_file.split('.csv')[0].split('_')[-3].split('by')[1]
+        s_cell = s_file.split('.csv')[0].split('_')[-2].split('in')[1]   
+    elif s_file.find(f'results_{s_sample}_Density_') > -1:
+        s_type = 'Density'
+        s_subtype = s_file.split('.csv')[0].split('_')[-1]
+        s_partition = s_file.split('.csv')[0].split('_')[-2].split('by')[1]
+        s_cell = 'density'
+    elif s_file.find(f'results_{s_sample}_FractionPositive') > -1:
+        s_type = 'FractionPositive'
+        s_subtype = s_file.split('.csv')[0].split('_')[-1]
+        s_partition = s_file.split('.csv')[0].split('_')[-3].split('by')[1]
+        s_cell = s_file.split('.csv')[0].split('_')[-2].split('in')[1]   
+    elif s_file.find(f'Neighbors') > -1 and s_file.find(s_sample.split('_')[0] + '_' + s_sample.split('_')[1]) > -1:
+            print('neighbors')
+            s_type = s_file.split('_')[3]
+            s_subtype = s_file.split('_')[3] #s_file.split('.csv')[0].split('_')[-1]
+            s_partition = s_file.split('.csv')[0].split('_')[-2].split('by')[1]
+            s_cell = s_file.split('.csv')[0].split('_')[-1].split('in')[1]   
+    elif s_file.find(f'results_{s_sample}_') > -1:
+        s_type = s_file.split('.csv')[0].split('_')[3]
+        s_subtype = s_file.split('.csv')[0].split('_')[3]
+        # results/results_20230307_U54-TMA-9_LeidenPatientSubtypes_Ripleys_Gcross.csv
+        s_partition = s_file.split('.csv')[0].split('_')[4]#'epi'
+        s_cell = s_file.split('.csv')[0].split('_')[-1]
+        #try:
+        #    s_cell = s_file.split('.csv')[0].split('_')[-1].split('in')[1]
+        #except:
+        #    s_cell = 'epi'
+           
+    else:
+        return(df_file)
+    df_file.loc[s_file,'subtype'] = s_subtype
+    df_file.loc[s_file,'type'] = s_type
+    df_file.loc[s_file,'partition'] = s_partition
+    df_file.loc[s_file,'cell'] = s_cell
+    return(df_file)
+
+def load_patient_results(df_file, df_surv, s_index,  s_time, s_censor):
+    s_type_one = df_file.loc[s_index,'type']
+    #ls_type = re.findall('[A-Z][a-z]*', s_type_one)
+    s_type = uppercase_to_space(s_type_one)
+    s_cell = df_file.loc[s_index,'cell']
+    s_measure = s_index.split('.csv')[0].split('_PDAC')[0].split('_')[1]
+    if s_measure == 'Fraction':
+        s_measure = s_cell
+        s_cell = 'Fraction Positive in'
+    if not s_measure.isnumeric():
+        s_cell = f'{s_cell} {s_measure}'
+    df_all=pd.read_csv(f'results/{s_index}',index_col=0)
+    ls_marker = (df_all.columns[(df_all.dtypes=='float64') & (~df_all.columns.isin([s_time,s_censor]))]).tolist() #
+    df_all['Old_Pt_ID'] = df_all.index
+    df_all = df_all.merge(df_surv,on='Old_Pt_ID',how='left',suffixes=('_1',''))
+    df_all = df_all[~df_all.Old_Pt_ID.duplicated(keep='first')]
+    d_replace={'Ovary_Met':'Mets', 'Liver_Met':'Mets', 'Lung_Met':'Mets', 'Lymph node':'Mets',
+       'Peritoneum_Met':'Mets'}
+    df_all['subtype'] = df_all.subtype.replace(d_replace)
+    return(ls_marker, df_all, s_type, s_cell)
+
+def correlation_heatmap(df_all, s_title, dim = (8,7)):
+    g = sns.clustermap(df_all.corr().fillna(0),yticklabels=1,figsize=dim)
+    plt.close()
+    categories_order = df_all.corr().iloc[g.dendrogram_col.reordered_ind,:].index.tolist()
+    df_all = df_all.loc[:,categories_order]
+    rho = df_all.corr()
+    pval = df_all.corr(method=lambda x, y: pearsonr(x, y)[1]) - np.eye(*rho.shape)
+    p_vals = pval.applymap(lambda x: ''.join(['*' for t in [0.001,0.005,0.05] if x<=t]))
+    fig, ax = plt.subplots(figsize=dim,dpi=300)
+    sns.heatmap(rho, vmin=-1, vmax=1, annot=p_vals, fmt = '', cmap='RdBu_r',ax=ax,
+               yticklabels=1,xticklabels=1,cbar_kws={'label':'Pearson Correlation','aspect':30,'shrink':0.8})
+    ax.set_title(f'{s_title} Correlation n={len(df_all)}', fontdict={'fontsize':16}, pad=12);
+    return(fig, g, rho, pval)
+
+def caps_to_space(s_type_one):
+    ls_type = re.findall('[A-Z][a-z]*', s_type_one)
+    s_type = " ".join(ls_type)
+    return(s_type)
+
+def uppercase_to_space(inp):
+    out = re.sub(r'(?<![A-Z\W])(?=[A-Z])', ' ', inp)
+    if out[0] == ' ':
+        out = out[1::]
+    return out
+
+def merge_patient_df(df_tissue_type,df_surv,s_hue,s_patient='Old_Pt_ID'):
+    df_tissue_type[s_patient] = df_tissue_type.index
+    df_merge = df_tissue_type.merge(df_surv.loc[:,[s_patient,s_hue]],on=s_patient)
+    df_merge.set_index(s_patient,inplace=True)
+    df_merge = df_merge[~df_merge.index.duplicated()]
+    return(df_merge)
+
+def correlation_scatterplot(df_merge,s_hue,ls_scores,s_type_plot,alpha = 0.05,b_legend=False,b_in=False):
+    ls_colors = mpl.cm.tab10.colors
+    ls_color = [ls_colors[7],ls_colors[0],ls_colors[1],ls_colors[2],ls_colors[3],ls_colors[4],ls_colors[5],ls_colors[6],ls_colors[8],ls_colors[9]] #
+    d_fig = {}
+    df_merge[s_hue] = df_merge.loc[:,s_hue].fillna('__')
+    d_color = dict(zip(sorted(df_merge.loc[:,s_hue].unique()),ls_color))
+    for s_marker in ls_scores:
+        for s_tum in df_merge.drop(s_hue,axis=1).columns:
+            ls_index = sorted(set(df_merge.loc[:,s_marker].dropna().index).intersection(set(df_merge.loc[:,s_tum].dropna().index)))
+            if not s_tum == s_marker:
+                try:
+                    r, pvalue = stats.pearsonr(y=df_merge.loc[ls_index,s_tum], x=df_merge.loc[ls_index,s_marker])
+                except:
+                    print(f'skipping {s_tum}')
+                    pvalue=1
+                if pvalue < alpha:
+                    fig, ax = plt.subplots(figsize=(2.5,2.6),dpi=300)
+                    sns.scatterplot(x=s_tum, y=s_marker, data=df_merge.loc[ls_index],
+                                    ax=ax,s=15,legend=b_legend,hue=s_hue,palette=d_color)  
+                    ax.set_ylabel(f'{s_marker}') 
+                    if b_in:
+                        ax.set_xlabel(f'{s_type_plot} {s_tum.replace("_"," in ")}') 
+                    else:
+                        ax.set_xlabel(f'{s_tum}') 
+                    ax.set_title(f'{s_type_plot} {s_tum.split("_")[0]}\n vs {s_marker}\n r = {r:.2f} \np = {pvalue:.3f} n={len(df_merge.loc[ls_index])}',fontsize=12) 
+                    if b_legend:
+                        ax.legend(bbox_to_anchor=(1.01,.3))
+                    plt.tight_layout()
+                    d_fig.update({f'scatterplot_{s_type_plot}_{s_tum}_vs_{s_marker}':fig})
+    return(d_fig)
+
+def multi_plots(df_merge,df_surv,s_find='all',n_neighbors=5,resolution=0.5,ls_hue=['Cohort'],s_title='Abundance',figsize=(14,10),figsize2=(12,4)):
+    ls_col = df_merge.columns[(df_merge.columns.str.contains(s_find))] #
+    adata = make_adata(df_merge,ls_col,n_neighbors=6)
+    #umap
+    for s_hue in ls_hue:
+        adata.obs[s_hue] = adata.obs.index.map(dict(zip(df_surv.Old_Pt_ID,df_surv.loc[:,s_hue])))
+        sc.pl.umap(adata, color=s_hue,title=s_title)
+    # clusters
+    sc.tl.leiden(adata,resolution=resolution)
+    sc.pl.umap(adata, color='leiden',title=s_title,palette=mpl.cm.Set1.colors)
+    # patient heatmap
+    ls_annot = adata.obs.columns.tolist()
+    df_p = df_merge.loc[:,ls_col.tolist()].fillna(0).merge(adata.obs.astype('object'),left_index=True,right_index=True,suffixes=("","_y")) #[ls_hue[0]]
+    gg, df_annot = patient_heatmap(df_p,ls_col,ls_annot,figsize=figsize,linkage='average')
+    #survival
+    df_st = df_p.merge(df_surv.loc[:,['Survival','Survival_time','Old_Pt_ID']].set_index('Old_Pt_ID'),left_index=True,right_index=True).dropna()
+    df_st = df_st[~df_st.index.duplicated()]
+    fig1, p1, fig2, p2 = km_cph(df_st)
+    print(p1)
+    g = sns.clustermap(df_p.drop(s_hue,axis=1).groupby('leiden').mean(),xticklabels=1,figsize=figsize2,cmap='viridis',
+                  dendrogram_ratio=0.1, cbar_pos=(.04, 0.92, 0.03, 0.10))
+    g.ax_heatmap.set_xticklabels([item.get_text().replace(s_find,'').replace('_',' ').replace('in','') for item in g.ax_heatmap.get_xticklabels()])
+    return(adata)
+
+
+# networkx
+def make_links(rho,pval,s_split='_in',s_split2='  '):
+    pvals = pval.stack().reset_index()
+    pvals.columns = ['var1', 'var2', 'pvalue']
+    links = rho.stack().reset_index()
+    links.columns = ['var1', 'var2', 'value']
+    links['var1c'] = [f'{item.split(s_split)[0]}' for item in links.var1]
+    links['var2c'] = [f'{item.split(s_split)[0]}' for item in links.var2]
+    links['var1c'] = [f'{item.split(s_split2)[-1]}' for item in links.var1c]
+    links['var2c'] = [f'{item.split(s_split2)[-1]}' for item in links.var2c]
+    links['pval'] = pvals.pvalue
+    return(links)
+
+def drop_list(links,ls_drop):
+    es_drop_out = set()
+    for s_drop in ls_drop:
+        es_drop_out.update(set(links[links.var1c.str.contains(s_drop)].var1c.unique()))
+        es_drop_out.update(set(links[links.var2c.str.contains(s_drop)].var2c.unique()))
+    ls_drop_out = sorted(es_drop_out)
+    return(ls_drop_out)
+
+def filter_links(links, ls_drop, thresh=0.5,b_greater=True):
+    if b_greater:
+        links_filtered = links.loc[(links['pval'] < 0.05) & (links['value'] > thresh) 
+                                   & (links['var1'] != links['var2']) & (links['var1c'] != links['var2c'])
+                                   & (~links['var2c'].isin(ls_drop)) & (~links['var1c'].isin(ls_drop))]
+    else:
+        links_filtered = links.loc[(links['pval'] < 0.05) & (links['value'] < thresh) 
+                                   & (links['var1'] != links['var2']) & (links['var1c'] != links['var2c'])
+                                   & (~links['var2c'].isin(ls_drop)) & (~links['var1c'].isin(ls_drop))]
+    links_filtered_copy = links_filtered.copy()
+    return(links_filtered_copy)
+
+def make_graph_layout(links_filtered,source,target):
+    G=nx.from_pandas_edgelist(df=links_filtered, source=source, target=target,edge_attr=['weight','color','style'])
+    df = pd.DataFrame(index=G.nodes(), columns=G.nodes())
+    for row, data in nx.shortest_path_length(G):
+        for col, dist in data.items():
+            df.loc[row,col] = dist
+    df = df.fillna(df.max().max())
+    layout = nx.kamada_kawai_layout(G, dist=df.to_dict())
+    return(G, layout)
+
+def concat_links(links_filtered,links_filtered_neg):
+    links_filtered_neg['color'] = 'blue'
+    links_filtered['color'] = 'red'
+    links_filtered_neg['style'] = 'dashed'
+    links_filtered['style'] = 'solid'
+    links_filtered2 = pd.concat([links_filtered_neg,links_filtered]) 
+    links_filtered2['weight'] = abs(links_filtered2.value)
+    links_filtered2['names'] = links_filtered2.var1c+links_filtered2.var2c
+    return(links_filtered2)
+
+def get_G_attributes(G):
+    ls_color = [n3['color'] for n1, n2, n3 in list(G.edges(data=True))]
+    ls_style = [n3['style'] for n1, n2, n3 in list(G.edges(data=True))]
+    ls_weight = [n3['weight']*2 for n1, n2, n3 in list(G.edges(data=True))]
+    return(ls_color,ls_style,ls_weight)
+
+def label_hubs(G, hubs):
+    labels = {}    
+    for node in G.nodes():
+        if node in hubs:
+            #set the node name as the key and the label as its value 
+            labels[node] = node
+    return(labels)
+
+def plt_sig3(df_test,ls_order,ax):
+    props = {'connectionstyle':matplotlib.patches.ConnectionStyle.Bar(armA=0.0, armB=0.0, fraction=0.0, angle=None),
+             'arrowstyle':'-','linewidth':1}
+    #draw on axes
+    y_lim = ax.get_ylim()[1]
+    y_lim_min = ax.get_ylim()[0]
+    y_diff = (y_lim-y_lim_min)/10
+    for count, s_index in enumerate(df_test[df_test.reject].index):
+        y_test = (y_diff+count*y_diff)
+        text =f"p-adj={df_test.loc[s_index,'p-adj']:.1}"
+        one = df_test.loc[s_index,'group1']
+        two = df_test.loc[s_index,'group2']
+        x_one = np.argwhere(np.array(ls_order) == one)[0][0]
+        x_two = np.argwhere(np.array(ls_order) == two)[0][0]
+        ax.annotate(text, xy=(np.mean([x_one,x_two]),y_lim - y_test),fontsize=8)
+        ax.annotate('', xy=(x_one,y_lim - y_test), xytext=(x_two,y_lim - y_test), arrowprops=props)
+        #break
+    return(ax)
+                        
+def categorical_correlation_boxplot(df_all,s_group,s_marker,s_type,s_cell,alpha=0.05,s_propo='in',b_ttest=False):
+        df_group = df_all.loc[:,[s_group,s_marker]]
+        df_group = df_group.dropna()
+        df_group = df_group.loc[~df_group.index.duplicated(),~df_group.columns.duplicated()]
+        #print(len(df_group))
+        if s_group==s_marker:
+            return(None,1,None,None)
+        if df_group.loc[:,s_group].nunique() > 2:
+            statistic, pvalue = group_median_diff(df_group,s_group=s_group,s_marker=s_marker)
+        elif df_group.loc[:,s_group].nunique() == 2:
+            s_high = df_group.loc[:,s_group].unique()[0]
+            s_low = df_group.loc[:,s_group].unique()[1]
+            n_high = sum(df_group.loc[:,s_group]==s_high)
+            n_low = sum(df_group.loc[:,s_group]==s_low)
+
+            try:
+                statistic,pvalue = stats.mannwhitneyu(df_group.loc[df_group.loc[:,s_group]==s_high,s_marker],
+                                               df_group.loc[df_group.loc[:,s_group]==s_low,s_marker])
+            except:
+                print(f'mann whitney u error: {s_group} vs {s_marker}')
+                pvalue = 1
+            if b_ttest:
+                statistic,pvalue = stats.ttest_ind(df_group.loc[df_group.loc[:,s_group]==s_high,s_marker],
+                                               df_group.loc[df_group.loc[:,s_group]==s_low,s_marker])
+        else:
+            fig = None
+            pvalue = 1
+        # perform multiple pairwise comparison (Tukey HSD)
+        if np.isnan(pvalue):
+            pvalue = 1
+        if pvalue <= alpha:
+            m_comp = pairwise_tukeyhsd(endog=df_group.loc[:,s_marker].fillna(0), groups=df_group.loc[:,s_group], alpha=0.1)
+            df_test, ls_order = df_from_mcomp(m_comp)
+            if pd.Series(['Templates_binary','Rearrangements_binary','TE_Clones_binary','Recurrence']).isin([s_group]).any(): 
+                ls_order = np.flip(ls_order) 
+            if df_group.loc[:,s_group].nunique() > 2:
+                figsize=(6,3)
+            else:
+                figsize=(3,3)
+            fig, ax = plt.subplots(figsize=figsize,dpi=300)
+            sns.boxplot(data=df_group,x=s_group,y=s_marker,showfliers=False,ax=ax,order=[(item) for item in ls_order])
+            sns.stripplot(data=df_group,x=s_group,y=s_marker,ax=ax,order=[(item) for item in ls_order],palette='dark')
+            if df_group.loc[:,s_group].nunique() > 2:
+                plt_sig3(df_test,ls_order,ax)
+                ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.4f}')
+            else:
+                ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.4f} (n={n_low}, {n_high})')
+            #ax.set_ylim(ax.get_ylim()[0],ax.get_ylim()[1])
+            ax.set_ylabel(f'{s_marker} {s_type}')
+            plt.tight_layout()
+        else:
+            fig = None
+            df_test = None
+        return(fig, pvalue,df_test,df_group) 
+    
+def add_old_pt_ID(df_all,df_surv,ls_group,ls_Annot,s_primary_met='PDAC'):
+    ls_need = ['Tissue','Old_Pt_ID']
+    df_all['Old_Pt_ID'] = df_all.index
+    df_all.index.name = None
+    df_all = df_all.merge(df_surv.loc[:,(ls_group + ls_Annot + ls_need)],on='Old_Pt_ID',suffixes=('','_also'))
+    df_all = df_all[~df_all.Old_Pt_ID.duplicated()]
+
+    if not s_primary_met=='Mets':
+        df_all = df_all[df_all.Tissue=='PDAC']
+
+    if s_primary_met=='Mets':
+        s_hue = 'Cohort'
+        print('updating Mets Cohort') #necessary?
+        d_mets = {'Ovary_Met':np.nan, 'Peritoneum_Met':np.nan, 'Lung_Met':'lung_cohort', 'Liver_Met':'liver_cohort',  'Lymph node':np.nan}
+        df_all[s_hue] = df_all.Old_Pt_ID.map(dict(zip(df_all.Old_Pt_ID,df_all.Tissue))).map(d_mets)
+    return(df_all)
