@@ -33,11 +33,23 @@ from scipy import stats
 from scipy.stats import entropy, norm
 from scipy.spatial import cKDTree
 
+import skimage
+from skimage.filters import unsharp_mask
+from skimage.restoration import (denoise_tv_chambolle, denoise_bilateral,
+                                 denoise_wavelet, estimate_sigma)
+from skimage.feature import blob_dog, blob_log, blob_doh
+from skimage import color, morphology
+from skimage.transform import rescale
+import tifffile
+from scipy.ndimage import median_filter
+from skimage.util import img_as_ubyte,  img_as_float
+from math import sqrt
 import statsmodels
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 import statsmodels.api as sm
-
+from statannotations.Annotator import Annotator
+from itertools import combinations
 
 import anndata
 from anndata import AnnData
@@ -45,7 +57,187 @@ import plotly.express as px
 
 codedir = os.getcwd()
 
+def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
 
+    blobs_dog = blob_dog(image_gray,  min_sigma=min_sigma, max_sigma=max_sigma, threshold=threshold,exclude_border=exclude_border)
+    blobs_dog[:, 2] = blobs_dog[:, 2] * sqrt(2)
+
+    blobs_list = [image_gray,  blobs_dog] #blobs_doh ,
+    colors = ['red','red', ]
+    titles = ['Original','Difference of Gaussian',#
+              ]
+    sequence = zip(blobs_list, colors, titles)
+
+    fig, axes = plt.subplots(1, 2, figsize=(6, 3), sharex=True, sharey=True)
+    ax = axes.ravel()
+
+    for idx, (blobs, color, title) in enumerate(sequence):
+        if idx == 1:
+            ax[idx].set_title(f'{title}\nmin={min_sigma} max={max_sigma} thresh={threshold}')
+        else:
+            ax[idx].set_title(f'{title}')
+        ax[idx].imshow(image)
+        if not title == 'Original':
+            for blob in blobs:
+                y, x, r = blob
+                c = plt.Circle((x, y), r, color=color, linewidth=2, fill=False)
+                ax[idx].add_patch(c)
+        #ax[idx].set_axis_off()
+
+    plt.tight_layout()
+    plt.close(fig)
+    return(blobs_dog,fig)
+
+def km_plot(df,s_col,s_time,s_censor):
+    results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+                                    groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
+    kmf = KaplanMeierFitter()
+    fig, ax = plt.subplots(figsize=(4,4),dpi=300)
+    ls_order = sorted(df.loc[:,s_col].dropna().unique())
+    for s_group in ls_order:
+        print(s_group)
+        df_abun = df[df.loc[:,s_col]==s_group]
+        durations = df_abun.loc[:,s_time]
+        event_observed = df_abun.loc[:,s_censor]
+        kmf.fit(durations,event_observed,label=s_group)
+        kmf.plot(ax=ax,ci_show=True,show_censors=True)
+    ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
+    ax.set_ylim(-0.05,1.05)
+    return(fig,ls_order)
+
+def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
+    cph = CoxPHFitter()  #penalizer=0.1
+    if df.columns.isin(['Stage']).any():
+        df.Stage = df.Stage.replace({'I':1,'II':2,'III':3,'IV':4})
+    cph.fit(df.dropna(), s_time, event_col=s_censor) 
+    fig, ax = plt.subplots(figsize=figsize,dpi=300)
+    cph.plot(ax=ax)
+    pvalue = cph.summary.p[s_multi]
+    ax.set_title(f'{s_multi}\np={pvalue:.2} n={(len(df.dropna()))}')
+    plt.tight_layout()
+    return(fig,cph)
+        
+def plot_pearson(df_pri,s_porg,s_foci,s_stats,ls_plots=['Primaries','Mets','Both']):
+    pvalues = []
+    fig,ax=plt.subplots(1,len(ls_plots),figsize=(len(ls_plots)*3.3,2.7), sharex='col',sharey='row',squeeze=False,dpi=200)
+    ax = ax.ravel()
+    for idx,s_met_pri in enumerate(ls_plots):
+        #print(s_met_pri)
+        if s_met_pri == 'Mets':
+            b_met = df_pri.Patient_Specimen_ID.str.contains('-M',na=False)
+        elif s_met_pri == 'Primaries':
+            b_met = ~(df_pri.Patient_Specimen_ID.str.contains('-M',na=True))
+        else:
+            b_met = df_pri.Patient_Specimen_ID.str.contains('ST-',na=False)
+        sns.regplot(data=df_pri.loc[b_met,[s_porg,s_foci]],x=s_foci,y=s_porg,label=s_met_pri,ax=ax[idx])
+        y = df_pri.loc[b_met,[s_foci,s_porg]].dropna().loc[:,s_foci]
+        x = df_pri.loc[y.index,s_porg]
+        if s_stats == 'non-parametric':
+            statistic, pvalue = stats.spearmanr(x, y)
+        else:
+            statistic, pvalue = stats.pearsonr(x, y)
+        pvalues.append(pvalue)
+        if idx > 0:
+            ax[idx].set_ylabel('')
+        else:
+            ax[idx].set_ylabel(s_porg.replace('trim_padj_0.2_',''))
+        ax[idx].set_title(f'{s_met_pri} p={pvalue:.3}')
+    plt.tight_layout()
+    return(fig, pvalues)
+
+# QQ-plot
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+from bioinfokit.analys import stat
+def qq_plot_hist(df_pri,s_cat,s_foci):
+    fig, ax = plt.subplots(2,1)
+    res = stat()
+    df_melt = df_pri.loc[~df_pri.loc[:,s_cat].isna(),[s_cat,s_foci]]
+    df_melt.columns = ['treatments', 'value']
+    res.anova_stat(df=df_melt, res_var='value', anova_model='value ~ C(treatments)')
+    # res.anova_std_residuals are standardized residuals obtained from ANOVA (check above)
+    sm.qqplot(res.anova_std_residuals, line='45',ax=ax[0])
+    ax[0].set_title(f'{s_foci} ({s_cat})')
+    ax[0].set_xlabel("Theoretical Quantiles")
+    ax[0].set_ylabel("Standardized Residuals")
+
+    # histogram
+    ax[1].hist(res.anova_model_out.resid, bins='auto', histtype='bar', ec='k') 
+    ax[1].set_title(f'')
+    ax[1].set_xlabel("Residuals")
+    ax[1].set_ylabel('Frequency')
+    plt.tight_layout()
+
+def violin_stats(df_pri,d_order,s_foci,s_stats):
+    order = []
+    ls_ticks = []
+    d_pval = {}
+    df_both = pd.DataFrame()
+    for idx, s_cat in enumerate(d_order.keys()):
+        ls_order = d_order[s_cat]
+        s_bad = ls_order[0]
+        s_good = ls_order[1]
+        d_replace = {s_bad:'bad',s_good:'good'}
+        a = df_pri.loc[df_pri.loc[:,s_cat]==ls_order[0],s_foci].dropna()
+        b = df_pri.loc[df_pri.loc[:,s_cat]==ls_order[1],s_foci].dropna()
+        if s_stats == 'mean':
+            statistic, pvalue = stats.f_oneway(b,a)
+        elif s_stats == 'non-parametric':
+            statistic, pvalue = stats.kruskal(b,a)
+        df_pri['hue'] = df_pri.loc[:,s_cat].replace(d_replace)
+        df_pri['x'] = s_cat
+        df_both=pd.concat([df_both,df_pri.loc[df_pri.hue.isin(['bad','good']),['x','hue',s_foci]]])
+        for s_test in ls_order:
+            order.append((s_cat,d_replace[s_test]))
+            ls_ticks.append(s_test)
+        d_pval.update({s_cat:pvalue})
+    return(df_both,d_pval,order,ls_ticks)
+    
+def plot_violins(df_both,d_pval,d_order,s_stats,s_foci,order,ls_ticks,b_correct=False):
+    figsize=(3,3)
+    fig,ax=plt.subplots(dpi=300,figsize=figsize)
+    if s_stats == 'non-parametric':
+        sns.violinplot(data=df_both,y=s_foci,x='x',hue='hue',ax=ax,alpha=0.2,linewidth=1,cut=0,inner='quartile',hue_order=['bad','good'],color='white')#
+    elif s_stats == 'mean':
+        sns.violinplot(data=df_both,y=s_foci,x='x',hue='hue',ax=ax,alpha=0.2,linewidth=1,cut=0,inner=None,
+                       hue_order=['bad','good'],color='white')
+        sns.boxplot(data=df_both,y=s_foci,x='x',hue='hue',ax=ax,showmeans=True,medianprops={'visible': False},
+                       whiskerprops={'visible': False},meanline=True,showcaps=False,
+                       meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
+    sns.stripplot(data=df_both,y=s_foci,x='x',hue='hue',s=4,dodge=True,ax=ax,palette="Set1",jitter=0.2,alpha=0.8,hue_order=['bad','good']) #
+    #annotate
+    if len(order) == 6:
+        pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5])]
+        pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]],d_pval[list(d_order.keys())[2]]]
+    elif len(order) == 4:
+        pairs = [(order[0],order[1]),(order[2],order[3])]
+        pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]]]
+    else:
+        pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5]),(order[6],order[7])]
+        pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]],d_pval[list(d_order.keys())[2]],d_pval[list(d_order.keys())[3]]]
+    reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
+    formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(pvalues)]
+    if b_correct:
+        formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(corrected)]
+    annotator = Annotator(ax, pairs=pairs, data=df_both,y=s_foci,x='x',hue='hue',verbose=False)
+    annotator.set_custom_annotations(formatted_pvalues)
+    annotator.annotate()
+    ax.legend().remove()
+    if len(order) == 6:
+        ax.set_xticks([-0.2,0.2, 0.8,1.2,1.8,2.2])
+    elif len(order) == 4:
+        ax.set_xticks([-0.2,0.2, 0.8,1.2])
+    else:
+        ax.set_xticks([-0.2,0.2, 0.8,1.2,1.8,2.2,2.8,3.2])
+    ax.set_xticklabels(ls_ticks,rotation=45)
+    df_label = df_both.dropna().groupby('x').count().hue.loc[d_order.keys()]
+    ls_labs = [f'{item.replace("Subtype","")} n={df_label[item]}' for item in df_label.index]
+    ax.set_xlabel(" | ".join(ls_labs),fontsize=8)
+    ax.set_title(f"{s_foci}", fontsize='x-large') #
+    plt.tight_layout()
+    return(fig,pvalues,corrected)
+    
+############################################# for survival/spatial notebook ########################
 def more_plots(adata,df_p,s_subtype,s_type,s_partition,s_cell,n_neighbors,resolution,z_score,linkage,
                s_color_p='Platform',d_color_p = {'cycIF':'gold','IMC':'darkblue'},
                savedir=f'{codedir}/20220222/Survival_Plots_Both',figsize=(7,6)):
@@ -108,6 +300,52 @@ def group_mean_diff(df_marker,s_group,s_marker):
         statistic = None
     return(statistic, pvalue)
 
+def quartile_km(df,s_col,s_title_str='',savedir='',alpha=0.05,i_cut=4,labels=['low','med-low','med-high','high'],s_time='Survival_time',s_censor='Survival'):
+    '''
+    make sure labels has a high and low, other names will be ignored
+    s_title_str additional label for title
+    '''
+    df = df.loc[:,[s_col,s_time,s_censor]].dropna()
+    if len(df) > 1:
+        #KM
+        q = pd.qcut(df.loc[:,s_col], q=i_cut,labels=labels,duplicates='drop').str.replace('X','') 
+        s_title1 = f'{s_col}'
+        s_title2 = f'quantiles={i_cut}'
+        df.loc[q=='low','abundance'] = 'low'
+        df.loc[q=='high','abundance'] = 'high'
+        #log rank
+        results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+                                            groups=df.abundance, event_observed=df.loc[:,s_censor])
+        pvalue = results.summary.p[0]
+        if np.isnan(pvalue):
+            print(f'{s_col}: pvalue is na')
+            pvalue = 1
+        if pvalue < alpha:
+            kmf = KaplanMeierFitter()
+            fig, ax = plt.subplots(figsize=(3,3),dpi=300)
+            for s_group in ['high','low']:
+                df_abun = df[df.abundance==s_group]
+                durations = df_abun.loc[:,s_time]
+                event_observed = df_abun.loc[:,s_censor]
+                try:
+                    kmf.fit(durations, event_observed,label=s_group)
+                    kmf.plot(ax=ax,ci_show=False,show_censors=True)
+                except:
+                    results.summary.p[0] = 1
+            s_pval = f'{results.summary.p[0]:.2}'
+            ax.set_title(f'{s_title1}\n{s_title_str} {s_title2}\np={s_pval} n={len(df)} [{sum(df.abundance=="high")}, {sum(df.abundance=="low")}]',fontsize=10)
+            ax.set_xlabel(s_time)
+            ax.legend(loc='upper right')
+            plt.tight_layout()
+            fig.savefig(f"{savedir}/KM_{s_title1.replace(' ','_')}_{s_title_str}_{s_title2.replace(' ','_')}_{i_cut}_{s_censor}_{s_pval}.png",dpi=300)
+            #plt.close(fig)
+    else:
+        print(f'{s_col}: too many nas')
+        df = pd.DataFrame(columns=[s_time,s_censor,'abundance'],index=[0],data=np.nan)
+        pvalue = 1
+    return(df, pvalue)
+
+
 ## find best cutpoint 
 def single_km(df_all,s_cell,s_subtype,s_plat,s_col,savedir,alpha=0.05,cutp=0.5,s_time='Survival_time',s_censor='Survival',s_propo='in'):
     df_all.index = df_all.index.astype('str')
@@ -161,34 +399,34 @@ def single_km(df_all,s_cell,s_subtype,s_plat,s_col,savedir,alpha=0.05,cutp=0.5,s
 
 warnings.filterwarnings("default",category = exceptions.ApproximationWarning)
 
-def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
-    cph = CoxPHFitter()  #penalizer=0.1
-    if df.columns.isin(['Stage']).any():
-        df.Stage = df.Stage.replace({'I':1,'II':2,'III':3,'IV':4})
-    cph.fit(df.dropna(), s_time, event_col=s_censor) 
-    fig, ax = plt.subplots(figsize=figsize,dpi=300)
-    cph.plot(ax=ax)
-    pvalue = cph.summary.p[s_multi]
-    ax.set_title(f'{s_multi}\np={pvalue:.2} n={(len(df.dropna()))}')
-    plt.tight_layout()
-    return(fig,cph)
+# def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
+#     cph = CoxPHFitter()  #penalizer=0.1
+#     if df.columns.isin(['Stage']).any():
+#         df.Stage = df.Stage.replace({'I':1,'II':2,'III':3,'IV':4})
+#     cph.fit(df.dropna(), s_time, event_col=s_censor) 
+#     fig, ax = plt.subplots(figsize=figsize,dpi=300)
+#     cph.plot(ax=ax)
+#     pvalue = cph.summary.p[s_multi]
+#     ax.set_title(f'{s_multi}\np={pvalue:.2} n={(len(df.dropna()))}')
+#     plt.tight_layout()
+#     return(fig,cph)
 
-def km_plot(df,s_col,s_time,s_censor):
-    results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
-                                    groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
-    kmf = KaplanMeierFitter()
-    fig, ax = plt.subplots(figsize=(4,4),dpi=300)
-    ls_order = sorted(df.loc[:,s_col].dropna().unique())
-    for s_group in ls_order:
-        print(s_group)
-        df_abun = df[df.loc[:,s_col]==s_group]
-        durations = df_abun.loc[:,s_time]
-        event_observed = df_abun.loc[:,s_censor]
-        kmf.fit(durations,event_observed,label=s_group)
-        kmf.plot(ax=ax,ci_show=True,show_censors=True)
-    ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
-    ax.set_ylim(-0.05,1.05)
-    return(fig,ls_order)
+# def km_plot(df,s_col,s_time,s_censor):
+#     results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+#                                     groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
+#     kmf = KaplanMeierFitter()
+#     fig, ax = plt.subplots(figsize=(4,4),dpi=300)
+#     ls_order = sorted(df.loc[:,s_col].dropna().unique())
+#     for s_group in ls_order:
+#         print(s_group)
+#         df_abun = df[df.loc[:,s_col]==s_group]
+#         durations = df_abun.loc[:,s_time]
+#         event_observed = df_abun.loc[:,s_censor]
+#         kmf.fit(durations,event_observed,label=s_group)
+#         kmf.plot(ax=ax,ci_show=True,show_censors=True)
+#     ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
+#     ax.set_ylim(-0.05,1.05)
+#     return(fig,ls_order)
 
 def patient_heatmap(df_p,ls_col,ls_annot,figsize=(7,6),linkage='complete',
                     ls_color=[mpl.cm.tab10.colors,mpl.cm.Set1.colors,mpl.cm.Set2.colors,mpl.cm.Set3.colors,mpl.cm.Paired.colors,mpl.cm.Pastel1.colors],
