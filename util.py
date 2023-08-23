@@ -9,7 +9,7 @@ import re
 import warnings
 from scipy.stats import pearsonr
 import networkx as nx
-
+from bokeh.palettes import Colorblind
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import cm, gridspec
@@ -113,7 +113,8 @@ def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
     fig, ax = plt.subplots(figsize=figsize,dpi=300)
     cph.plot(ax=ax)
     pvalue = cph.summary.p[s_multi]
-    ax.set_title(f'{s_multi}\np={pvalue:.2} n={(len(df.dropna()))}')
+    hr = cph.summary.loc[:,'exp(coef)'][s_multi]
+    ax.set_title(f'{s_multi}\nHR={hr:.2},p={pvalue:.2} n={(len(df.dropna()))}')
     plt.tight_layout()
     return(fig,cph)
         
@@ -124,11 +125,11 @@ def plot_pearson(df_pri,s_porg,s_foci,s_stats,ls_plots=['Primaries','Mets','Both
     for idx,s_met_pri in enumerate(ls_plots):
         #print(s_met_pri)
         if s_met_pri == 'Mets':
-            b_met = df_pri.Patient_Specimen_ID.str.contains('-M',na=False)
+            b_met = df_pri.Tumor_Type=='Met'#.str.contains('-M',na=False)
         elif s_met_pri == 'Primaries':
-            b_met = ~(df_pri.Patient_Specimen_ID.str.contains('-M',na=True))
+            b_met = df_pri.Tumor_Type=='Primary'#~(df_pri.Patient_Specimen_ID.str.contains('-M',na=True))
         else:
-            b_met = df_pri.Patient_Specimen_ID.str.contains('ST-',na=False)
+            b_met = df_pri.Public_Patient_ID.str.contains('ST-',na=False)
         sns.regplot(data=df_pri.loc[b_met,[s_porg,s_foci]],x=s_foci,y=s_porg,label=s_met_pri,ax=ax[idx])
         y = df_pri.loc[b_met,[s_foci,s_porg]].dropna().loc[:,s_foci]
         x = df_pri.loc[y.index,s_porg]
@@ -167,6 +168,100 @@ def qq_plot_hist(df_pri,s_cat,s_foci):
     ax[1].set_xlabel("Residuals")
     ax[1].set_ylabel('Frequency')
     plt.tight_layout()
+    
+def add_quartiles(df_merge,s_porg):
+    x = df_merge.loc[:,s_porg].dropna()
+    b_cut = df_merge.loc[:,s_porg].dropna().index
+    print(len(x))
+    d_cut = {'quartiles':(4,['low','med-low','med-high','high']),
+             'tertiles' : (3,['low','med','high']),
+            'medians' : (2,['low','high'])}
+    for s_col, tu_cut in d_cut.items():
+        i_cut = tu_cut[0]
+        labels = tu_cut[1]
+        q = pd.qcut(x, q=i_cut,labels=labels) 
+        if s_col == 'quartiles':
+            df_merge[s_col] = np.NaN
+            df_merge.loc[b_cut,s_col] = q.replace({'med-low':np.NaN,'med-high':np.NaN})
+        elif s_col == 'tertiles':
+            df_merge[s_col] = np.NaN
+            df_merge.loc[b_cut,s_col] = q.replace({'med':np.NaN})#'high'
+        else:
+            df_merge[s_col] = np.NaN
+            df_merge.loc[b_cut,s_col] = q
+        print(df_merge[s_col].value_counts())
+    return(df_merge)
+
+
+# Liver vermillion
+# Lung blue
+# High pORG orange
+# Low pORG sky blue
+# Basal black
+# Classical reddish purple
+# High pSUB bluish green
+# Low pSUB yellow
+
+def violin_stats2(df_pri,d_order,s_foci,s_stats):
+    order = []
+    d_pval = {}
+    df_both = pd.DataFrame()
+    for idx, s_cat in enumerate(d_order.keys()):
+        ls_order = d_order[s_cat]
+        s_bad = ls_order[0]
+        s_good = ls_order[1]
+        d_replace = {s_bad:'bad',s_good:'good'}
+        a = df_pri.loc[df_pri.loc[:,s_cat]==ls_order[0],s_foci].dropna()
+        b = df_pri.loc[df_pri.loc[:,s_cat]==ls_order[1],s_foci].dropna()
+        if s_stats == 'mean':
+            statistic, pvalue = stats.f_oneway(b,a)
+        elif s_stats == 'non-parametric':
+            statistic, pvalue = stats.kruskal(b,a)
+        df_pri['hue'] = df_pri.loc[:,s_cat].replace(d_replace)
+        df_pri['x'] = s_cat
+        df_both=pd.concat([df_both,df_pri.loc[df_pri.hue.isin(['bad','good']),['x','hue',s_foci,s_cat]].rename({s_cat:'color'},axis=1)])
+        for s_test in ls_order:
+            order.append(s_test)
+        d_pval.update({s_cat:pvalue})
+    return(df_both,d_pval,order)
+
+def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_porg,b_correct=False,figsize=(3,3)):
+    fig,ax=plt.subplots(dpi=300,figsize=figsize)
+    hue_order = df_both.sort_values(by=['x','hue']).color.unique()
+    if s_stats == 'non-parametric':
+        sns.violinplot(data=df_both,y=s_foci,x='color',ax=ax,alpha=0.2,linewidth=1,cut=0,inner='quartile',order=hue_order,color='white')#
+    elif s_stats == 'mean':
+        sns.violinplot(data=df_both,y=s_foci,x='color',ax=ax,alpha=0.2,linewidth=1,cut=0,inner=None,
+                       order=hue_order,color='white')
+        sns.boxplot(data=df_both,y=s_foci,x='color',ax=ax,showmeans=True,medianprops={'visible': False},
+                       whiskerprops={'visible': False},meanline=True,showcaps=False,order=hue_order,
+                       meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
+    sns.stripplot(data=df_both,y=s_foci,x='color',s=4,dodge=True,ax=ax,palette=d_colorblind,jitter=0.2,alpha=0.8,order=hue_order) #
+    #annotate
+    if len(order) == 6:
+        pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5])]
+        pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]],d_pval[list(d_order.keys())[2]]]
+    elif len(order) == 4:
+        pairs = [(order[0],order[1]),(order[2],order[3])]
+        pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]]]
+    else:
+        pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5]),(order[6],order[7])]
+        pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]],d_pval[list(d_order.keys())[2]],d_pval[list(d_order.keys())[3]]]
+    reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
+    formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(pvalues)]
+    if b_correct:
+        formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(corrected)]
+    annotator = Annotator(ax, pairs=pairs, data=df_both,y=s_foci,x='color',verbose=False)
+    annotator.set_custom_annotations(formatted_pvalues)
+    annotator.annotate()
+    #ax.legend().remove()
+    df_label = df_both.dropna().groupby('x').count().hue.loc[d_order.keys()]
+    ls_labs = [f'{item.replace("quartiles","pORG quartiles")} n={df_label[item]}' for item in df_label.index]
+    ax.set_xlabel(" | ".join(ls_labs),fontsize=8)
+    ax.set_ylabel(ax.get_ylabel(),fontsize=8)
+    ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", fontsize='large',loc='right',pad=10) #
+    plt.tight_layout()
+    return(fig,pvalues,corrected)
 
 def violin_stats(df_pri,d_order,s_foci,s_stats):
     order = []
@@ -186,7 +281,7 @@ def violin_stats(df_pri,d_order,s_foci,s_stats):
             statistic, pvalue = stats.kruskal(b,a)
         df_pri['hue'] = df_pri.loc[:,s_cat].replace(d_replace)
         df_pri['x'] = s_cat
-        df_both=pd.concat([df_both,df_pri.loc[df_pri.hue.isin(['bad','good']),['x','hue',s_foci]]])
+        df_both=pd.concat([df_both,df_pri.loc[df_pri.hue.isin(['bad','good']),['x','hue',s_foci,s_cat]].rename({s_cat:'color'},axis=1)])
         for s_test in ls_order:
             order.append((s_cat,d_replace[s_test]))
             ls_ticks.append(s_test)
@@ -204,7 +299,7 @@ def plot_violins(df_both,d_pval,d_order,s_stats,s_foci,order,ls_ticks,b_correct=
         sns.boxplot(data=df_both,y=s_foci,x='x',hue='hue',ax=ax,showmeans=True,medianprops={'visible': False},
                        whiskerprops={'visible': False},meanline=True,showcaps=False,
                        meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
-    sns.stripplot(data=df_both,y=s_foci,x='x',hue='hue',s=4,dodge=True,ax=ax,palette="Set1",jitter=0.2,alpha=0.8,hue_order=['bad','good']) #
+    sns.stripplot(data=df_both,y=s_foci,x='x',hue='hue',s=4,dodge=True,ax=ax,palette=Colorblind[8],jitter=0.2,alpha=0.8,hue_order=['bad','good']) #
     #annotate
     if len(order) == 6:
         pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5])]
@@ -233,7 +328,7 @@ def plot_violins(df_both,d_pval,d_order,s_stats,s_foci,order,ls_ticks,b_correct=
     df_label = df_both.dropna().groupby('x').count().hue.loc[d_order.keys()]
     ls_labs = [f'{item.replace("Subtype","")} n={df_label[item]}' for item in df_label.index]
     ax.set_xlabel(" | ".join(ls_labs),fontsize=8)
-    ax.set_title(f"{s_foci}", fontsize='x-large') #
+    ax.set_title(f"{s_foci}", fontsize='large') #
     plt.tight_layout()
     return(fig,pvalues,corrected)
     
