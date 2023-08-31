@@ -215,6 +215,7 @@ def violin_stats2(df_pri,d_order,s_foci,s_stats):
         b = df_pri.loc[df_pri.loc[:,s_cat]==ls_order[1],s_foci].dropna()
         if s_stats == 'mean':
             statistic, pvalue = stats.f_oneway(b,a)
+            #statistic, pvalue = stats.ttest_ind(b,a)
         elif s_stats == 'non-parametric':
             statistic, pvalue = stats.kruskal(b,a)
         df_pri['hue'] = df_pri.loc[:,s_cat].replace(d_replace)
@@ -262,6 +263,26 @@ def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_por
     ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", fontsize='large',loc='right',pad=10) #
     plt.tight_layout()
     return(fig,pvalues,corrected)
+
+def plot_violins3(df_both,s_stats,s_foci,s_comp,s_porg,hue='TCR_Met_Site',figsize=(3,3)):
+    fig,ax=plt.subplots(dpi=300,figsize=figsize)
+    if s_stats == 'non-parametric':
+        sns.violinplot(data=df_both,y=s_foci,x=s_comp,ax=ax,alpha=0.2,linewidth=1,cut=0,
+                       inner='quartile',color='white')#
+    elif s_stats == 'mean':
+        sns.violinplot(data=df_both,y=s_foci,x=s_comp,ax=ax,alpha=0.2,linewidth=1,cut=0,inner=None,
+                       color='white')
+        sns.boxplot(data=df_both,y=s_foci,x=s_comp,ax=ax,showmeans=True,medianprops={'visible': False},
+                       whiskerprops={'visible': False},meanline=True,showcaps=False,
+                       meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
+    sns.stripplot(data=df_both,y=s_foci,x=s_comp,hue=hue,s=8,dodge=False,ax=ax,jitter=0.2,alpha=0.8,
+                 palette='tab20') #
+    ax.legend(bbox_to_anchor=(1,1),fontsize='small')
+    ax.set_xticklabels(ax.get_xticklabels(),rotation=45,fontsize=8)
+    ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", loc='left',fontsize='large',pad=10) #
+    plt.tight_layout()
+    return(fig)
+
 
 def violin_stats(df_pri,d_order,s_foci,s_stats):
     order = []
