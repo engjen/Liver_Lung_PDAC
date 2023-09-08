@@ -15,6 +15,7 @@ import matplotlib as mpl
 from matplotlib import cm, gridspec
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+from sklearn.metrics import roc_curve, RocCurveDisplay
 mpl.rc('figure', max_open_warning = 0)
 
 import sklearn
@@ -1489,3 +1490,60 @@ def add_old_pt_ID(df_all,df_surv,ls_group,ls_Annot,s_primary_met='PDAC'):
         d_mets = {'Ovary_Met':np.nan, 'Peritoneum_Met':np.nan, 'Lung_Met':'lung_cohort', 'Liver_Met':'liver_cohort',  'Lymph node':np.nan}
         df_all[s_hue] = df_all.Old_Pt_ID.map(dict(zip(df_all.Old_Pt_ID,df_all.Tissue))).map(d_mets)
     return(df_all)
+
+def plot_youden_tcr(df_patient,s_tcr,pos_label):
+    d_result = {}
+    ls_col_thresh = df_patient.columns[(df_patient.columns.str.contains('_day_survival')) & (df_patient.columns.str.contains(s_tcr))]
+    fig,ax = plt.subplots(3,2,dpi=200,figsize=(5,6),sharex=True,sharey=True)
+    ax=ax.ravel()
+    for ax_idx, s_col in enumerate(ls_col_thresh):
+        #print(s_col)
+        #s_tcr = '_'.join(s_col.split('_day_survival')[0].split('_')[0:-1])
+        df_patient.loc[:,[s_col,s_tcr]]
+        df_test = df_patient.loc[:,[s_col,s_tcr]].dropna().copy()
+        fpr, tpr, thresholds = roc_curve(y_true=df_test.loc[:,s_col].values,
+                                         y_score=df_test.loc[:,s_tcr].values,
+                                         pos_label=pos_label)
+        idx = np.argmax(tpr - fpr)
+        youden = np.max(tpr - fpr)
+        cutoff = thresholds[idx]
+        d_result.update({s_col:cutoff})
+        print(f'{s_col} {youden:.2}')
+        display = RocCurveDisplay(fpr=fpr, tpr=tpr)
+        ax[ax_idx].plot([0, 1], [0, 1], transform=ax[ax_idx].transAxes,ls='--',color='lightgray')
+        display.plot(ax=ax[ax_idx])
+        ax[ax_idx].text(fpr[idx]+.01,tpr[idx]-.075,f'Youden={youden:.2}\ncutoff={cutoff:.2}',fontsize='small')
+        ax[ax_idx].scatter(fpr[idx],tpr[idx])
+        ax[ax_idx].set_title(s_col.replace(f'{s_tcr}_',''),fontsize='medium')
+        ax[ax_idx].set_xlabel('')
+        ax[ax_idx].set_ylabel('')#ax[ax_idx].get_ylabel(),fontsize='small'#
+    ax[5].axis('off')
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(s_tcr,pad=20)
+    plt.tight_layout()
+    return(fig,d_result)
+    
+
+# # check the quartiles code
+# #s_porg ='pORG_0.2_Primary'#'pORG_78_Primary'#'pORG_0.2_Met'
+# x = df_pri.loc[:,s_porg].dropna()
+# b_cut = df_pri.loc[:,[s_porg,'Public_Patient_ID']].dropna().Public_Patient_ID
+# b_cut = df_pri.loc[:,s_porg].dropna().index
+# print(len(x))
+# d_cut = {'quartiles':(4,['low','med-low','med-high','high']),
+#          'tertiles' : (3,['low','med','high']),
+#         'medians' : (2,['low','high'])}
+# for s_col, tu_cut in d_cut.items():
+#     i_cut = tu_cut[0]
+#     labels = tu_cut[1]
+#     q = pd.qcut(x, q=i_cut,labels=labels) 
+#     break
+# df_pri['test'] = q
+# fig,ax=plt.subplots()
+# sns.stripplot(data=df_pri,x='test',y=s_porg,ax=ax)
+# ax.axhline(df_pri.loc[df_pri.test=='low',s_porg].max())
+# ax.axhline(df_pri.loc[df_pri.test=='high',s_porg].min())
