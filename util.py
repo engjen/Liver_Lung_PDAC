@@ -246,7 +246,10 @@ def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_por
     elif len(order) == 4:
         pairs = [(order[0],order[1]),(order[2],order[3])]
         pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]]]
-    else:
+    elif len(order) == 2:
+        pairs = [(order[0],order[1])]
+        pvalues = [d_pval[list(d_order.keys())[0]]]
+    elif len(order) == 8:
         pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5]),(order[6],order[7])]
         pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]],d_pval[list(d_order.keys())[2]],d_pval[list(d_order.keys())[3]]]
     reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
@@ -258,7 +261,8 @@ def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_por
     annotator.annotate()
     #ax.legend().remove()
     df_label = df_both.dropna().groupby('x').count().hue.loc[d_order.keys()]
-    ls_labs = [f'{item.replace("quartiles","pORG quartiles")} n={df_label[item]}' for item in df_label.index]
+    s_replace = s_porg.split('_')[0]
+    ls_labs = [f'{item.replace("quartiles",f"{s_replace} quartiles")} n={df_label[item]}' for item in df_label.index]
     ax.set_xlabel(" | ".join(ls_labs),fontsize=8)
     ax.set_ylabel(ax.get_ylabel(),fontsize=8)
     ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", fontsize='large',loc='right',pad=10) #
