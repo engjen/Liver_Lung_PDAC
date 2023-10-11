@@ -1531,6 +1531,131 @@ def plot_youden_tcr(df_patient,s_tcr,pos_label):
     plt.tight_layout()
     return(fig,d_result)
     
+#GSEA
+
+#plotting functions
+
+def compare_dataframe(ls_plot_items,d_en,sorter_combined,ls_columns):
+    df_all = pd.DataFrame()
+    es_marker = set()
+    for s_comp in ls_plot_items: 
+        df_plot_long = pd.DataFrame()
+        for s_direction in ['UP','DN']:
+            s_compare =f'{s_comp}_{s_direction}'
+            #print(s_compare)
+            #manual sorting
+            df_plot = d_en[s_compare].loc[d_en[s_compare].NAME.isin(sorter_combined),ls_columns]
+            df_plot['direction'] = s_direction
+            df_plot_long = pd.concat([df_plot_long,df_plot])
+            es_marker = es_marker.union(set(df_plot.NAME))#.union(es_add)
+            #sorter_all.update({s_compare:sorter})
+        df_plot_long = df_plot_long.sort_values(by='NES')
+        df_plot_long['comparison'] = s_comp
+        df_all = pd.concat([df_all,df_plot_long])
+    df_all.NAME = df_all.NAME.astype('category')
+    df_all.NAME = df_all.NAME.cat.set_categories(sorter_combined) #order manually
+    df_plot_bar = df_all[df_all.NAME.isin(sorter_combined)].sort_values(by=['comparison','NAME'])
+    return(df_plot_bar,es_marker)
+
+def plot_double_bars(df_plot_bar,ls_plot_items,d_colorblind,sorter_combined,hatchbar='',figsize=(5,4)):
+    # plot figure
+    fig, ax = plt.subplots(dpi=200,figsize=figsize)
+    height=0.4
+    for idx, s_comp in enumerate(ls_plot_items):
+        df_comp = df_plot_bar[df_plot_bar.comparison==s_comp]
+        df_comp.set_index('NAME',inplace=True)
+        if idx == 0:
+            indices = np.arange(len(df_comp.index))
+            ax.barh(y=indices+height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
+                    edgecolor='k', linewidth=1,
+                color=[d_colorblind[item] for item in df_comp.color],label=s_comp,alpha=0.8,
+               )
+        else: 
+            ax.barh(y=indices-height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
+                    label=s_comp,alpha=0.8,edgecolor='k',hatch=hatchbar,
+                color=[d_colorblind[item] for item in df_comp.color],
+               )
+        ax.set_yticks(range(len(df_comp.index)))
+        ax.set_yticklabels(df_comp.index)
+    ax.set_title('',loc='left')
+    ax.set_xlabel('NES')
+    return(fig, ax)
+
+def twin_pvalue_axis(df_plot_bar,ls_plot_items,sorter_combined,fig,ax,height=0.4,hatch=''):
+    #pvalue axis
+    ax2 = ax.twiny()
+    for idx, s_comp in enumerate(ls_plot_items):
+        print(s_comp)
+        df_comp = df_plot_bar[df_plot_bar.comparison==s_comp]
+        df_comp.set_index('NAME',inplace=True)
+        if idx == 0:
+            indices = np.arange(len(df_comp.index))
+            ax2.scatter(y=indices+height/2, x=df_comp.loc[sorter_combined,'FDR.q.val'],
+                        facecolor='gray',linewidth=0.5,edgecolor='k',alpha=0.8)
+        else: 
+            ax2.scatter(y=indices-height/2, x=df_comp.loc[sorter_combined,'FDR.q.val'],
+                       facecolor='gray',linewidth=0.5,edgecolor='k',alpha=0.8,hatch=3*hatch,)#hatch=3*'//',
+        #break
+    ax2.set_xlabel('FDR.Q', color='gray') 
+    ax2.tick_params(axis='x', labelcolor='gray')
+    return(fig,ax2)
+
+from matplotlib.legend_handler import HandlerPatch
+import matplotlib.patches as mpatches
+class HandlerEllipse(HandlerPatch):
+    def create_artists(self, legend, orig_handle,
+                       xdescent, ydescent, width, height, fontsize, trans):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = mpatches.Ellipse(xy=center, width=height + xdescent,
+                             height=height + ydescent)
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+    
+def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,mappable,hatch='//',height=0.4,figsize=(4,4),anchor=(1.25,1)):
+    my_cmap = mappable.get_cmap()
+    fig, ax = plt.subplots(dpi=300,figsize=figsize)
+    for idx, s_comp in enumerate(ls_plot_items):
+        df_comp = df_plot_bar[df_plot_bar.comparison==s_comp]
+        df_comp.set_index('NAME',inplace=True)
+        if idx == 0:
+            indices = np.arange(len(df_comp.index))
+            ax.barh(y=indices+height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
+                color=[my_cmap(item) for item in df_comp.FDR_color],label=s_comp,linewidth=1,
+                    edgecolor='k',
+               )
+        else: 
+            ax.barh(y=indices-height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
+                    hatch=hatch,edgecolor='k',
+                color=[my_cmap(item) for item in df_comp.FDR_color],label=s_comp,linewidth=1,
+               )
+        ax.set_yticks(range(len(df_comp.index)))
+        ax.set_yticklabels(df_comp.index)
+    fig.colorbar(mappable=mappable,ax=ax,label='FDR.q.val')
+    handles = [mpl.patches.Patch(facecolor='white', edgecolor='black',
+                             label=d_labels[ls_plot_items[0]]),
+                      mpl.patches.Patch(facecolor='white', edgecolor='black',
+                             label=d_labels[ls_plot_items[1]],
+                                        hatch=hatch)]
+    ax.legend(handles=handles,bbox_to_anchor=anchor,markerscale=1,title='Comparison')
+    ax.set_xlabel('NES')
+    return(fig, ax)
+
+#add FDRQ
+def add_fdrq_legend(texts,hatch,anchor=(1.01,0.6)):
+    if hatch == '//':
+        c1 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k")
+        c2 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k",hatch=3*hatch)
+        
+        plt.legend([c1,c2],texts,loc='upper left', bbox_to_anchor=anchor, ncol=1,title='FDR.Q',
+                   handler_map={mpatches.Circle: HandlerEllipse()}).get_frame()
+    else:
+        c1 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k")
+        plt.legend([c1],['FDR.Q'],loc='upper left', bbox_to_anchor=anchor, ncol=1,#title='FDR.Q',
+                   handler_map={mpatches.Circle: HandlerEllipse()}).get_frame()
+
+#erase low FDR.q
+#df_plot_bar.loc[(abs(df_plot_bar.loc[:,'NES']) < 1.5) | (df_plot_bar.loc[:,'FDR.q.val'] > 0.15),'NES'] = 0
 
 # # check the quartiles code
 # #s_porg ='pORG_0.2_Primary'#'pORG_78_Primary'#'pORG_0.2_Met'
