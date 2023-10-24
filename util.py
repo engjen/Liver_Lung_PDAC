@@ -104,7 +104,7 @@ def km_plot(df,s_col,s_time,s_censor):
         kmf.plot(ax=ax,ci_show=True,show_censors=True)
     ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
     ax.set_ylim(-0.05,1.05)
-    return(fig,ls_order)
+    return(fig,ax,ls_order)
 
 def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
     cph = CoxPHFitter()  #penalizer=0.1
@@ -173,7 +173,7 @@ def qq_plot_hist(df_pri,s_cat,s_foci):
 def add_quartiles(df_merge,s_porg):
     x = df_merge.loc[:,s_porg].dropna()
     b_cut = df_merge.loc[:,s_porg].dropna().index
-    print(len(x))
+    #print(len(x))
     d_cut = {'quartiles':(4,['low','med-low','med-high','high']),
              'tertiles' : (3,['low','med','high']),
             'medians' : (2,['low','high'])}
@@ -190,7 +190,7 @@ def add_quartiles(df_merge,s_porg):
         else:
             df_merge[s_col] = np.NaN
             df_merge.loc[b_cut,s_col] = q
-        print(df_merge[s_col].value_counts())
+        #print(df_merge[s_col].value_counts())
     return(df_merge)
 
 
@@ -1612,7 +1612,7 @@ class HandlerEllipse(HandlerPatch):
         p.set_transform(trans)
         return [p]
     
-def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,mappable,hatch='//',height=0.4,figsize=(4,4),anchor=(1.25,1)):
+def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,mappable,hatch='//',height=0.4,figsize=(4,4),anchor=(1.25,1),x_label='NES',ncol=2):
     my_cmap = mappable.get_cmap()
     fig, ax = plt.subplots(dpi=300,figsize=figsize)
     for idx, s_comp in enumerate(ls_plot_items):
@@ -1637,8 +1637,8 @@ def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,map
                       mpl.patches.Patch(facecolor='white', edgecolor='black',
                              label=d_labels[ls_plot_items[1]],
                                         hatch=hatch)]
-    ax.legend(handles=handles,bbox_to_anchor=anchor,markerscale=1,title='Comparison')
-    ax.set_xlabel('NES')
+    ax.legend(handles=handles,bbox_to_anchor=anchor,markerscale=1,title='Comparison',ncol=ncol,loc='upper center')
+    ax.set_xlabel(x_label)
     return(fig, ax)
 
 #add FDRQ
@@ -1653,6 +1653,147 @@ def add_fdrq_legend(texts,hatch,anchor=(1.01,0.6)):
         c1 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k")
         plt.legend([c1],['FDR.Q'],loc='upper left', bbox_to_anchor=anchor, ncol=1,#title='FDR.Q',
                    handler_map={mpatches.Circle: HandlerEllipse()}).get_frame()
+        
+def plot_double_bars_grid(df_plot_bar,ls_plot_items,d_colorblind,sorter_combined,hatchbar='',figsize=(5,4),xlabel='NES'):
+    # plot figure
+    fig = plt.figure(figsize=figsize,dpi=200)#, layout="constrained"
+    spec = fig.add_gridspec(1,2,wspace=0,)
+    ax1 = fig.add_subplot(spec[:, 0])
+    height=0.4
+    for idx, s_comp in enumerate(ls_plot_items):
+        df_comp = df_plot_bar[df_plot_bar.comparison==s_comp]
+        df_comp.set_index('NAME',inplace=True)
+        if idx == 0:
+            indices = np.arange(len(df_comp.index))
+            ax1.barh(y=indices+height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
+                    edgecolor='k', linewidth=1,
+                color=[d_colorblind[item] for item in df_comp.color],label=s_comp,alpha=0.8,
+               )
+        else: 
+            ax1.barh(y=indices-height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
+                    label=s_comp,alpha=0.8,edgecolor='k',hatch=hatchbar,
+                color=[d_colorblind[item] for item in df_comp.color],
+               )
+        ax1.set_yticks(range(len(df_comp.index)))
+        ax1.set_yticklabels(df_comp.index)
+    ax1.set_title('',loc='left')
+    ax1.set_xlabel(xlabel)
+    return(fig, ax1)
+
+def add_pvalue_axis(df_plot_bar,ls_plot_items,sorter_combined,fig,ax,height=0.4,hatch=''):
+    spec = fig.add_gridspec(1,2)
+    ax2 = fig.add_subplot(spec[:, 1])
+    for idx, s_comp in enumerate(ls_plot_items):
+        print(s_comp)
+        df_comp = df_plot_bar[df_plot_bar.comparison==s_comp]
+        df_comp.set_index('NAME',inplace=True)
+        if idx == 0:
+            indices = np.arange(len(df_comp.index))
+            ax2.scatter(y=indices+height/2, x=df_comp.loc[sorter_combined,'FDR.q.val'],
+                        facecolor='gray',linewidth=0.5,edgecolor='k',alpha=0.8)
+        else: 
+            ax2.scatter(y=indices-height/2, x=df_comp.loc[sorter_combined,'FDR.q.val'],
+                       facecolor='gray',linewidth=0.5,edgecolor='k',alpha=0.8,hatch=3*hatch,)#hatch=3*'//',
+        #break
+    ax2.set_xlabel('FDR.Q', color='gray') 
+    ax2.tick_params(axis='x', labelcolor='gray')
+    ax2.set_yticks([])
+    return(fig,ax2)
+def add_fdrq_legend_ax2(texts,hatch,ax2,anchor=(1.01,0.6)):
+    if hatch == '//':
+        c1 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k")
+        c2 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k",hatch=3*hatch)
+    
+        legend2 = ax2.legend([c1,c2],texts,loc='upper left', bbox_to_anchor=anchor, ncol=1,title='FDR.Q',frameon=True,
+                   handler_map={mpatches.Circle: HandlerEllipse()}).get_frame()
+    else:
+        c1 = mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor='gray', edgecolor="k")
+        legend2 = ax2.legend([c1],['FDR.Q'],loc='upper left', bbox_to_anchor=anchor, ncol=1,frameon=True,
+                   handler_map={mpatches.Circle: HandlerEllipse()}).get_frame()
+    return(legend2)
+
+# # organotropism and pORG (side by side axis)
+# sorter_combined =  ['HALLMARK_MYOGENESIS' ,'HALLMARK_CHOLESTEROL_HOMEOSTASIS',
+#   'HALLMARK_ANDROGEN_RESPONSE','HALLMARK_OXIDATIVE_PHOSPHORYLATION',
+#   'HALLMARK_DNA_REPAIR','HALLMARK_INTERFERON_ALPHA_RESPONSE','HALLMARK_E2F_TARGETS',
+#   'HALLMARK_MYC_TARGETS_V1','HALLMARK_G2M_CHECKPOINT','HALLMARK_MITOTIC_SPINDLE',
+#     'HALLMARK_GLYCOLYSIS','HALLMARK_MTORC1_SIGNALING','HALLMARK_PROTEIN_SECRETION',
+#                   ]
+# ls_plot_items = ['Top4th_pORG.20_vs_Bottom4th_pORG.20',
+#     'LiverCohort_vs_LungNotLiverCohort']
+# #generate dataframe with comparisons
+# df_plot_bar,es_marker = util.compare_dataframe(ls_plot_items,d_en,sorter_combined,ls_columns)
+# #add colors
+# b_purist = df_plot_bar.comparison=='LiverCohort_vs_LungNotLiverCohort'
+# b_psub = df_plot_bar.comparison=='Top4th_pORG.20_vs_Bottom4th_pORG.20'
+# df_plot_bar.loc[b_purist & (df_plot_bar.direction=='UP'),'color'] = 'Liver'
+# df_plot_bar.loc[b_purist & (df_plot_bar.direction=='DN'),'color'] = 'Lung'
+# df_plot_bar.loc[b_psub & (df_plot_bar.direction=='UP'),'color'] = 'high pORG'
+# df_plot_bar.loc[b_psub & (df_plot_bar.direction=='DN'),'color'] = 'low pORG'
+# # plot figure
+# fig, ax1 = plot_double_bars_grid(df_plot_bar,ls_plot_items,d_colorblind,sorter_combined,hatchbar,
+#                                 figsize=(5.5,4.5)) #util.plot_double_bars
+# #custom legend
+# handles = []
+# for s_color in ['high pORG', 'low pORG']:
+#     facecolor = d_colorblind[s_color]
+#     handles.append(mpl.patches.Patch(facecolor=facecolor, edgecolor='black',label=s_color,alpha=0.8,))
+# #hatch
+# for s_color in ['Liver', 'Lung']:
+#     facecolor = d_colorblind[s_color]
+#     handles.append(mpl.patches.Patch(facecolor=facecolor, edgecolor='black',label=s_color,
+#                                      alpha=0.8,hatch=hatchbar))
+
+# ax1.set_yticklabels([item.replace('HALLMARK_','').replace('EPITHELIAL_MESENCHYMAL_TRANSITION','EMT') for item in sorter_combined])
+# ax1.set_xlim(-2.2,2.2)
+# fig, ax2 = add_pvalue_axis(df_plot_bar,ls_plot_items,sorter_combined,fig,ax1,
+#                                  height=height,hatch=hatch) #util.twin_pvalue_axis
+# legend1 = ax2.legend(handles=handles,bbox_to_anchor=(1.1,1.01),markerscale=1,title='NES',frameon=False)
+# ax2.set_xlim((-0.1, 0.5))
+# ax2.axvline(0.2,linestyle='--',color='gray')
+# plt.tight_layout()
+# legend2 = add_fdrq_legend_ax2(texts= ['pORG', 'Cohort'],hatch=hatch,ax2=ax2)
+# ax2.add_artist(legend1)
+# ax2.add_artist(legend2)
+
+# #pSUB and purist  (shared axis)
+# hatch = '//'#''#
+# hatchbar = '//'#''
+# height=0.4
+# sorter_combined = ['HALLMARK_XENOBIOTIC_METABOLISM','HALLMARK_PEROXISOME', 'HALLMARK_FATTY_ACID_METABOLISM',
+#   'HALLMARK_BILE_ACID_METABOLISM', 'HALLMARK_PANCREAS_BETA_CELLS','HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION',
+#   'HALLMARK_APICAL_JUNCTION', 'HALLMARK_HYPOXIA', 'HALLMARK_GLYCOLYSIS']
+# ls_plot_items = ['Top4th_pSUB.1eNeg4_vs_Bottom4th_pSUB.1eNeg4', 'Top4th_PurIST.Score_vs_Bottom4th_PurIST.Score']
+# #generate dataframe with comparisons
+# df_plot_bar,es_marker = util.compare_dataframe(ls_plot_items,d_en,sorter_combined,ls_columns)
+# #add colors
+# b_purist = df_plot_bar.comparison=='Top4th_PurIST.Score_vs_Bottom4th_PurIST.Score'
+# b_psub = df_plot_bar.comparison=='Top4th_pSUB.1eNeg4_vs_Bottom4th_pSUB.1eNeg4'
+# df_plot_bar.loc[b_purist & (df_plot_bar.direction=='UP'),'color'] = 'high PurIST'
+# df_plot_bar.loc[b_purist & (df_plot_bar.direction=='DN'),'color'] = 'low PurIST'
+# df_plot_bar.loc[b_psub & (df_plot_bar.direction=='UP'),'color'] = 'high pSUB'
+# df_plot_bar.loc[b_psub & (df_plot_bar.direction=='DN'),'color'] = 'low pSUB'
+# # plot figure
+# fig, ax = util.plot_double_bars(df_plot_bar,ls_plot_items,d_colorblind,sorter_combined,hatchbar)
+# #custom legend
+# handles = []
+# for s_color in ['high pSUB', 'low pSUB']:
+#     facecolor = d_colorblind[s_color]
+#     handles.append(mpl.patches.Patch(facecolor=facecolor, edgecolor='black',label=s_color,alpha=0.8,))
+# #hatch
+# for s_color in [ 'high PurIST', 'low PurIST']:
+#     facecolor = d_colorblind[s_color]
+#     handles.append(mpl.patches.Patch(facecolor=facecolor, edgecolor='black',label=s_color,
+#                                      alpha=0.8,hatch=hatchbar))
+# ax.legend(handles=handles,bbox_to_anchor = (1.01,1),markerscale=1,title='NES')
+# ax.set_yticklabels([item.replace('HALLMARK_','').replace('EPITHELIAL_MESENCHYMAL_TRANSITION','EMT') for item in sorter_combined])
+# #add pvalue axis
+# fig, ax2 = util.twin_pvalue_axis(df_plot_bar,ls_plot_items,sorter_combined,fig,ax,
+#                                  height=height,hatch=hatch)
+# ax2.set_xlim((-0.0092, 0.21))
+# plt.tight_layout()
+# util.add_fdrq_legend(texts= ['pSUB', 'PurIST'],hatch=hatch)
+
 
 #erase low FDR.q
 #df_plot_bar.loc[(abs(df_plot_bar.loc[:,'NES']) < 1.5) | (df_plot_bar.loc[:,'FDR.q.val'] > 0.15),'NES'] = 0
