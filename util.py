@@ -1632,11 +1632,15 @@ def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,map
         ax.set_yticks(range(len(df_comp.index)))
         ax.set_yticklabels(df_comp.index)
     fig.colorbar(mappable=mappable,ax=ax,label='FDR.q.val')
-    handles = [mpl.patches.Patch(facecolor='white', edgecolor='black',
+    if len(ls_plot_items) == 2:
+        handles = [mpl.patches.Patch(facecolor='white', edgecolor='black',
                              label=d_labels[ls_plot_items[0]]),
                       mpl.patches.Patch(facecolor='white', edgecolor='black',
                              label=d_labels[ls_plot_items[1]],
                                         hatch=hatch)]
+    else:
+        handles = [mpl.patches.Patch(facecolor='white', edgecolor='black',
+                             label=d_labels[ls_plot_items[0]])]
     ax.legend(handles=handles,bbox_to_anchor=anchor,markerscale=1,title='Comparison',ncol=ncol,loc='upper center')
     ax.set_xlabel(x_label)
     return(fig, ax)
@@ -1711,6 +1715,81 @@ def add_fdrq_legend_ax2(texts,hatch,ax2,anchor=(1.01,0.6)):
         legend2 = ax2.legend([c1],['FDR.Q'],loc='upper left', bbox_to_anchor=anchor, ncol=1,frameon=True,
                    handler_map={mpatches.Circle: HandlerEllipse()}).get_frame()
     return(legend2)
+
+### youden ###
+
+#df_counts = pd.DataFrame(columns=['Long','Short','Short_Censored'])
+#     df_counts['total'] = df_counts.sum(axis=1)
+#     df_counts['included_ROC'] = df_counts.loc[:,['Short','Long']].sum(axis=1)
+    #break
+#df_counts.to_csv('patient_counts_TCR_ROC.csv')
+            #Num_censored = (df_patient2.loc[:,s_time] <= SurvivalThreshold) & (df_patient2.loc[:,s_tcr].notna()) & (df_patient2.loc[:,s_censor] == 0) & (df_patient2.Alive_30_days_post_surgery)
+            #df_counts.loc[f'{s_tcr}_{SurvivalThreshold}'] = [GoodIdx.sum(),BadIdx.sum(),Num_censored.sum()]
+        
+def youden_high_good(df_patient,b_primary,s_time,s_censor):
+    ls_foci = ['Shannon_Entropy_Tumor','Templates_per_ng', 
+               'Productive_Rearrangements','Simpsons_Diversity_Tumor',#'Fraction Shared Clones 10',
+               'Clonality_Tumor', 'Clonality_Blood',
+            'Fraction Tumor Distinct TCRs','Percent Tumor Distinct Clones',]
+    pal_porg_r = ('#E69F00','#56B4E9')
+    sns.set_palette(pal_porg_r)
+    pos_label='long'
+    dd_result = {}
+    d_fig={}
+    for s_tcr in ls_foci:
+        #print(s_tcr)
+        fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
+        fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
+        plt.close(fig)    
+        dd_result.update(d_result)
+    for s_surv in ['545_day_survival']:#'180_day_survival',
+        keys = df_patient.columns[(df_patient.columns.str.contains(s_surv))]
+        for key in keys:
+            s_tcr = '_'.join(key.split('_day_survival')[0].split('_')[0:-1])
+            try:
+                thresh = dd_result[key]
+            except:
+                continue
+            df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,[s_tcr,s_time,s_censor]].dropna()
+            df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'high',False:'low'})
+            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
+            d_fig.update({f'{b_primary}_{key}':fig})
+    return(d_fig)
+#low = good
+def youden_low_good(df_patient,b_primary,s_time,s_censor):
+    ls_foci = ['Shannon_Entropy_Blood','Simpsons_Diversity_Blood',
+     "Simpson's Evenness tumor", "Simpson's Evenness blood",
+              'Simpsons_Evenness_Blood','Simpsons_Evenness_Tumor']
+
+    pal_porg_r = ('#E69F00','#56B4E9')
+    sns.set_palette(pal_porg_r)
+    pal_porg = ('#56B4E9','#E69F00')
+    sns.set_palette(pal_porg)
+    pos_label='short'
+    dd_result = {}
+    d_fig = {}
+    for s_tcr in ls_foci:
+        #print(s_tcr)
+        fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
+        fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
+        plt.close(fig)
+        dd_result.update(d_result)
+        #break
+    sns.set_palette(pal_porg_r)
+    for s_surv in ['545_day_survival']:#'180_day_survival',
+        keys = df_patient.columns[(df_patient.columns.str.contains(s_surv))]
+        for key in keys:
+            s_tcr = '_'.join(key.split('_day_survival')[0].split('_')[0:-1])
+            try:
+                thresh = dd_result[key]
+            except:
+                continue
+            df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,['Public_Patient_ID',s_tcr,s_time,s_censor]].dropna()
+            df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'high',False:'low'})
+            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
+            d_fig.update({f'{b_primary}_{key}':fig})
+    return(d_fig)
+
 
 # # organotropism and pORG (side by side axis)
 # sorter_combined =  ['HALLMARK_MYOGENESIS' ,'HALLMARK_CHOLESTEROL_HOMEOSTASIS',
