@@ -1422,7 +1422,26 @@ def plt_sig3(df_test,ls_order,ax):
         ax.annotate('', xy=(x_one,y_lim - y_test), xytext=(x_two,y_lim - y_test), arrowprops=props)
         #break
     return(ax)
-                        
+
+def lighten_color(color, amount=0.5):
+    """
+    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Input can be matplotlib color string, hex string, or RGB tuple.
+
+    Examples:
+    >> lighten_color('g', 0.3)
+    >> lighten_color('#F034A3', 0.6)
+    >> lighten_color((.3,.55,.1), 0.5)
+    """
+    import matplotlib.colors as mc
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])          
+
 def categorical_correlation_boxplot(df_all,s_group,s_marker,s_type,s_cell,alpha=0.05,s_propo='in',b_ttest=False):
         df_group = df_all.loc[:,[s_group,s_marker]]
         df_group = df_group.dropna()
@@ -1463,8 +1482,8 @@ def categorical_correlation_boxplot(df_all,s_group,s_marker,s_type,s_cell,alpha=
             else:
                 figsize=(3,3)
             fig, ax = plt.subplots(figsize=figsize,dpi=300)
-            sns.boxplot(data=df_group,x=s_group,y=s_marker,showfliers=False,ax=ax,order=[(item) for item in ls_order])
-            sns.stripplot(data=df_group,x=s_group,y=s_marker,ax=ax,order=[(item) for item in ls_order],palette='dark')
+            sns.boxplot(data=df_group,x=s_group,y=s_marker,showfliers=False,ax=ax,order=[(item) for item in ls_order],palette=[lighten_color(color,0.7) for color in sns.color_palette()])
+            sns.stripplot(data=df_group,x=s_group,y=s_marker,ax=ax,order=[(item) for item in ls_order],alpha=1,linewidth=1)#,palette='dark'
             if df_group.loc[:,s_group].nunique() > 2:
                 plt_sig3(df_test,ls_order,ax)
                 ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.4f}')
@@ -1729,7 +1748,7 @@ def add_fdrq_legend_ax2(texts,hatch,ax2,anchor=(1.01,0.6)):
 def youden_high_good(df_patient,b_primary,s_time,s_censor):
     ls_foci = ['Shannon_Entropy_Tumor','Templates_per_ng', 
                'Productive_Rearrangements','Simpsons_Diversity_Tumor',#'Fraction Shared Clones 10',
-               'Clonality_Tumor', 'Clonality_Blood',
+               'Clonality_Tumor', 'Clonality_Blood','Productive_Rearrangements_Blood',
             'Fraction Tumor Distinct TCRs','Percent Tumor Distinct Clones',]
     pal_porg_r = ('#E69F00','#56B4E9')
     sns.set_palette(pal_porg_r)
