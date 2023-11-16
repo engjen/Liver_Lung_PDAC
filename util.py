@@ -1749,7 +1749,23 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor):
     ls_foci = ['Shannon_Entropy_Tumor','Templates_per_ng', 
                'Productive_Rearrangements','Simpsons_Diversity_Tumor',#'Fraction Shared Clones 10',
                'Clonality_Tumor', 'Clonality_Blood','Productive_Rearrangements_Blood',
-            'Fraction Tumor Distinct TCRs','Percent Tumor Distinct Clones',]
+            'Fraction Tumor Distinct TCRs','Percent Tumor Distinct Clones',
+                  'Hill_1', 'Hill_2', 'Hill_3','Fraction Shared Clones 10',
+            #'Fraction Shared Clones 5','Fraction Shared Clones 2',   
+       'Hill_4', 'Hill_5', 'Hill_6',
+    'propshared_proportion_shared_clones_blood',
+       'propshared_proportion_shared_templates_blood',
+           'Hill_1_blood',
+    'd50_Clones', 'd50_Clones_blood',
+           'chao_Estimator'
+           'true_Value','Fraction Shared Clones 0to2',
+ 'Fraction Shared Clones 2to5',
+ 'Fraction Shared Clones 5to10',
+ 'Fraction Shared Clones >=10',
+ 'Fraction Tumor Distinct Clones 0to2',
+ 'Fraction Tumor Distinct Clones 2to5',
+ 'Fraction Tumor Distinct Clones 5to10',
+ 'Fraction Tumor Distinct Clones >=10']
     pal_porg_r = ('#E69F00','#56B4E9')
     sns.set_palette(pal_porg_r)
     pos_label='long'
@@ -1776,9 +1792,17 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor):
     return(d_fig)
 #low = good
 def youden_low_good(df_patient,b_primary,s_time,s_censor):
-    ls_foci = ['Shannon_Entropy_Blood','Simpsons_Diversity_Blood',
+    ls_foci = ['Shannon_Entropy_Blood','Simpsons_Diversity_Blood','Fraction Shared Clones 10',
+           # 'Fraction Shared Clones 5','Fraction Shared Clones 2',   
      "Simpson's Evenness tumor", "Simpson's Evenness blood",
-              'Simpsons_Evenness_Blood','Simpsons_Evenness_Tumor']
+               'Hill_2_blood', 'Hill_3_blood','chao_Estimator_blood','true_Value_blood',
+        'Hill_4_blood', 'Hill_5_blood','Hill_6_blood',
+              'Simpsons_Evenness_Blood','Simpsons_Evenness_Tumor',
+                         'ginisimp_Value','ginisimp_Value_blood',
+                  'propshared_proportion_shared_clones',
+                   'propshared_proportion_shared_clones_blood',
+       'propshared_proportion_shared_templates_blood',
+      'propshared_proportion_shared_templates',]
 
     pal_porg_r = ('#E69F00','#56B4E9')
     sns.set_palette(pal_porg_r)
