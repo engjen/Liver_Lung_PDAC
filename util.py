@@ -49,6 +49,7 @@ import statsmodels
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 import statsmodels.api as sm
+import statannotations
 from statannotations.Annotator import Annotator
 from itertools import combinations
 
@@ -1762,10 +1763,12 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor):
  'Fraction Shared Clones 2to5',
  'Fraction Shared Clones 5to10',
  'Fraction Shared Clones >=10',
- 'Fraction Tumor Distinct Clones 0to2',
+ 'Fraction Tumor Distinct Clones 0to2','jaccard_Tumor','public_Tumor',#'morisita_Tumor',
  'Fraction Tumor Distinct Clones 2to5',
  'Fraction Tumor Distinct Clones 5to10',
- 'Fraction Tumor Distinct Clones >=10']
+ 'Fraction Tumor Distinct Clones >=10',
+              'jaccard_Met','jaccard_Primary','jaccard_Blood','public_Blood','public_Met',
+         'public_Primary',]
     pal_porg_r = ('#E69F00','#56B4E9')
     sns.set_palette(pal_porg_r)
     pos_label='long'
@@ -1799,7 +1802,7 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor):
         'Hill_4_blood', 'Hill_5_blood','Hill_6_blood',
               'Simpsons_Evenness_Blood','Simpsons_Evenness_Tumor',
                          'ginisimp_Value','ginisimp_Value_blood',
-                  'propshared_proportion_shared_clones',
+                  'propshared_proportion_shared_clones','morisita_Tumor_blood',
                    'propshared_proportion_shared_clones_blood',
        'propshared_proportion_shared_templates_blood',
       'propshared_proportion_shared_templates',]
@@ -1832,6 +1835,34 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor):
             fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
+
+def process_overlap(df,df_meta,ls_site=['Blood_Type','Site','Sample_Type']):
+    df = df.copy()
+    df_meta['Cohort_Blood'] = df_meta.Cohort + '_' + df_meta.Blood_Type
+    df_meta['Cohort_Tumor'] = df_meta.Cohort + '_'+ df_meta.Site.replace('Blood',np.nan)
+    #ls_site = [#'Cohort_Blood','Cohort_Tumor',
+         #'pORG_0.2_Primary_quartiles_Site','pORG_0.2_Met_quartiles_Site' ]   
+    for s_site in ls_site:
+        #print(f'\n{s_site}:')
+        for s_group in df_meta.loc[:,s_site].dropna().unique():
+            df_test = df_meta[df_meta.loc[:,s_site]==s_group]
+            if s_site.find('pORG') > -1:
+                s_rep = s_site.split('_')[2]
+                #print(s_rep)
+                s_group = s_group.replace('high_Blood',f'high_{s_rep}_Bld').replace('low_Blood',f'low_{s_rep}_Bld')
+            for s_test in ['Blood','Primary','Met']:
+                if (len(df_test[df_test.Site==s_test])) > 0:
+                    #print(len(df))
+                    ls_patient = df_test.loc[df_test.Site==s_test,'Sample']
+                    se_sum = df.loc[:,ls_patient].sum(axis=1)
+                    #print(len(se_sum))
+                    df.loc[se_sum.index,s_group] = se_sum
+                    #break
+            #break
+        #break
+    df_out = df.loc[:,~df.columns.str.contains('ST-')]
+    #df_out = df_out.reset_index().rename({'index':'Sample'},axis=1)
+    return(df_out)
 
 
 # # organotropism and pORG (side by side axis)
