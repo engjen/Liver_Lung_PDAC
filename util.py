@@ -1776,10 +1776,11 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor):
     d_fig={}
     for s_tcr in ls_foci:
         #print(s_tcr)
-        fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
-        fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
-        plt.close(fig)    
-        dd_result.update(d_result)
+        if df_patient.columns.isin([s_tcr]).any():
+            fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
+            fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
+            plt.close(fig)    
+            dd_result.update(d_result)
     for s_surv in ['545_day_survival']:#'180_day_survival',
         keys = df_patient.columns[(df_patient.columns.str.contains(s_surv))]
         for key in keys:
@@ -1815,11 +1816,11 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor):
     dd_result = {}
     d_fig = {}
     for s_tcr in ls_foci:
-        #print(s_tcr)
-        fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
-        fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
-        plt.close(fig)
-        dd_result.update(d_result)
+        if df_patient.columns.isin([s_tcr]).any():
+            fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
+            fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
+            plt.close(fig)
+            dd_result.update(d_result)
         #break
     sns.set_palette(pal_porg_r)
     for s_surv in ['545_day_survival']:#'180_day_survival',
