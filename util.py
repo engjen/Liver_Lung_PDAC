@@ -103,6 +103,7 @@ def km_plot(df,s_col,s_time,s_censor):
         event_observed = df_abun.loc[:,s_censor]
         kmf.fit(durations,event_observed,label=s_group)
         kmf.plot(ax=ax,ci_show=True,show_censors=True)
+        print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
     ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
     ax.set_ylim(-0.05,1.05)
     return(fig,ax,ls_order)
