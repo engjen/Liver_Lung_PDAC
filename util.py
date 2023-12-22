@@ -59,6 +59,33 @@ import plotly.express as px
 
 codedir = os.getcwd()
 
+def annotated_stripplot(plotting,ls_groups,label):
+    fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
+    sns.stripplot(**plotting,ax=ax,alpha=0.8,label=label)
+    sns.boxplot(**plotting,ax=ax,
+                       whiskerprops={'visible': False},showcaps=False,
+                       #meanline=True,showmeans=True,medianprops={'visible': False},
+                       medianprops={'color': 'k', 'ls': '-', 'lw': 1},#meanprops
+                showfliers=False,showbox=False)
+    pairs = [item for item in itertools.combinations(ls_groups,2)]
+    annot = Annotator(ax,pairs,**plotting)
+    annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
+    ax, test_results = annot.apply_test().annotate()
+    return(fig,ax,test_results)
+def annotated_stripplot2(plotting,ls_groups,label):
+    fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
+    sns.stripplot(**plotting,ax=ax,alpha=0.8,label=label)
+    sns.boxplot(**plotting,ax=ax,
+                       whiskerprops={'visible': False},showcaps=False,
+                       #meanline=True,showmeans=True,medianprops={'visible': False},
+                       medianprops={'color': 'k', 'ls': '-', 'lw': 1},#meanprops
+                showfliers=False,showbox=False)
+    pairs = [item for item in itertools.combinations(ls_groups,2)]
+    annot = Annotator(ax,pairs,**plotting)
+    annot.configure(test='test_ind',alternative='greater',comparisons_correction="fdr_bh",text_format='star', verbose=False)#'Mann-Whitney'
+    ax, test_results = annot.apply_test().annotate()
+    return(fig,ax,test_results)
+
 def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
 
     blobs_dog = blob_dog(image_gray,  min_sigma=min_sigma, max_sigma=max_sigma, threshold=threshold,exclude_border=exclude_border)
