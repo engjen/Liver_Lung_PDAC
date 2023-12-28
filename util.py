@@ -211,13 +211,13 @@ def add_quartiles(df_merge,s_porg):
         labels = tu_cut[1]
         q = pd.qcut(x, q=i_cut,labels=labels) 
         if s_col == 'quartiles':
-            df_merge[s_col] = np.NaN
-            df_merge.loc[b_cut,s_col] = q.replace({'med-low':np.NaN,'med-high':np.NaN})
+            df_merge[s_col] = pd.NA #np.NaN
+            df_merge.loc[b_cut,s_col] = q.replace({'med-low':pd.NA,'med-high':pd.NA})
         elif s_col == 'tertiles':
-            df_merge[s_col] = np.NaN
-            df_merge.loc[b_cut,s_col] = q.replace({'med':np.NaN})#'high'
+            df_merge[s_col] = pd.NA
+            df_merge.loc[b_cut,s_col] = q.replace({'med':pd.NA})#'high'
         else:
-            df_merge[s_col] = np.NaN
+            df_merge[s_col] = pd.NA
             df_merge.loc[b_cut,s_col] = q
         #print(df_merge[s_col].value_counts())
     return(df_merge)
