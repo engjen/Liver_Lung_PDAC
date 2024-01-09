@@ -315,7 +315,7 @@ def plot_violins3(df_both,s_stats,s_foci,s_comp,s_porg,hue='TCR_Met_Site',figsiz
     ax.set_xticklabels(ax.get_xticklabels(),rotation=45,fontsize=8)
     ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", loc='left',fontsize='large',pad=10) #
     plt.tight_layout()
-    return(fig)
+    return(fig, ax)
 
 
 def violin_stats(df_pri,d_order,s_foci,s_stats):
