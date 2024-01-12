@@ -2,6 +2,8 @@
 
 Supplemental_Dataset_1.csv: Patient level data including survival/outcome data, clinical covariates, metastasis site (liver, lung, other, "Cohort" column has whether patients were in liver or lung cohort [including resected and non-resected patients], "Recurrence_Sites_4" column has the metaststic recurrence sites for all resected patients), neoadjuvant treatment, primary resection, resection of lung or liver met (column name "Cohort_Met_Resection"), histology, GSVA scores for pORG, pSUB and PurIST from primary of met sample, DNA alterations in primary or met (for variants present in >9 patients)
 
+Supplemental_Dataset_1.xlsx: First sheet is duplicate of Supplemental_Dataset_1.csv, second sheet has speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. 
+
 Supplemental_Dataset_2.xlsx: Cox proportional hazards modeling results. 
 Multiple sheets, labeled multi for multivariable CPH and single for single variable.
 The sheet name will include S, Surf or Survival if the outcome is overall survival
