@@ -19,11 +19,11 @@ n: number of patients
 
 Supplemental_Dataset_3: DESeq2 differentially expressed genes
 
-Supplemental_Dataset_4: The DNA dataset
+Supplemental_Dataset_4: The DNA dataset. Per mutation data.
 
-Supplemental_Dataset_5: GSEA hallmarks results
+Supplemental_Dataset_5: GSEA hallmarks results for cohorts
 
-Supplemental_Dataset_6: VIPER results
+Supplemental_Dataset_6: VIPER results for primary tumors
 
 Supplemental_Dataset_7.xlsx: multiplex immunohistochemistry data
 Includes the following multiple sheets:
