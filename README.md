@@ -14,7 +14,7 @@ Contents:
 7. TCR analysis TCR survival
 8. GSVA violins GSEA bar plots
 
-- Image data and large files to run the first and third part of the code can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
+- **Large files** including raw image data, single cell image features, and detailed Adaptive TCRseq and DNA sequence data can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
 
 - **Additional analysis notebook** to load Adaptive TCR seq data and calculate TCR seq metrics found [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/20231222_TCR_seq_RNA_seq_data_processing.ipynb).
 - **Immunarch code** to generate repertoire overlap found [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/TCR_analysis.R).
@@ -43,7 +43,23 @@ Finally, clone my repo for processing, visualization and analysis of multiplex i
 
 `git clone https://gitlab.com/engje/mplex_image.git`
 
-### R
+### R Packages and Versions
 
-...
+R version 4.1.2 was used with R packages DESeq2, GSVA, msigdbr, gplots, and ggplot.  GSEA was run in JAVA using the command line interface.
+
+- immunarch (v0.9.0)
+- ClusterProfiler (v4.6.2)
+- immunedeconv (v2.1.0)
+- enrichplot (v1.18.4) 
+- Seurat (v4.3.0)
+- pheatmap (v1.0.12) 
+- MSigDB database (v7.5.1)
+- FastQC (ver 0.11.8) 
+- MultiQC (ver 1.7)
+- trim-galore (ver 0.6.3)
+- kallisto (ver 0.44.0)
+- genome assembly GRCh38.p5 
+- gencode (ver 24) 
+- CNAtools
+- GenVisR 
 
