@@ -173,7 +173,7 @@ def plot_pearson(df_pri,s_porg,s_foci,s_stats,ls_plots=['Primaries','Mets','Both
             ax[idx].set_ylabel('')
         else:
             ax[idx].set_ylabel(s_porg.replace('trim_padj_0.2_',''))
-        ax[idx].set_title(f'{s_met_pri} p={pvalue:.3}')
+        ax[idx].set_title(f'{s_met_pri} r={statistic:.3} p={pvalue:.3}')
     plt.tight_layout()
     return(fig, pvalues)
 
