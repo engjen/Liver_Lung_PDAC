@@ -1893,6 +1893,32 @@ def process_overlap(df,df_meta,ls_site=['Blood_Type','Site','Sample_Type']):
     #df_out = df_out.reset_index().rename({'index':'Sample'},axis=1)
     return(df_out)
 
+def process_overlap2(df,df_meta,ls_site=['Blood_Type','Site','Sample_Type']):
+    df = df.copy()
+    df_meta['Cohort_Blood'] = df_meta.Cohort + '_' + df_meta.Blood_Type
+    df_meta['Cohort_Tumor'] = df_meta.Cohort + '_'+ df_meta.Site.replace('Blood',np.nan)
+    #ls_site = [#'Cohort_Blood','Cohort_Tumor',
+         #'pORG_0.2_Primary_quartiles_Site','pORG_0.2_Met_quartiles_Site' ]   
+    for s_site in ls_site:
+        #print(f'\n{s_site}:')
+        for s_group in df_meta.loc[:,s_site].dropna().unique():
+            df_test = df_meta[df_meta.loc[:,s_site]==s_group]
+            #print(len(df_test))
+            if s_site.find('pORG') > -1:
+                s_rep = s_site.split('_')[2]
+                #print(s_rep)
+                s_group = s_group.replace('high_Blood',f'high_{s_rep}_Bld').replace('low_Blood',f'low_{s_rep}_Bld')
+            if len(df_test) > 0:
+                ls_patient = df_test.loc[:,'Sample']
+                se_sum = df.loc[:,ls_patient].sum(axis=1)
+                #print(len(se_sum))
+                df.loc[se_sum.index,s_group] = se_sum
+                #break
+            #break
+        #break
+    df_out = df.loc[:,~df.columns.str.contains('ST-')]
+    #df_out = df_out.reset_index().rename({'index':'Sample'},axis=1)
+    return(df_out)
 
 # # organotropism and pORG (side by side axis)
 # sorter_combined =  ['HALLMARK_MYOGENESIS' ,'HALLMARK_CHOLESTEROL_HOMEOSTASIS',
