@@ -1,0 +1,155 @@
+bcr_patient_barcode	invasive_adenocarcinoma_indicator	histologic_diagnosis	histologic_diagnosis_other	tumor_sample_type	gender	race	ethnicity
+TCGA-FB-AAQ2	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-H6-8124	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FZ-5926	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FZ-5924	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FZ-5923	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FZ-5922	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FZ-5921	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	[Unknown]	[Unknown]
+TCGA-FZ-5920	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-FZ-5919	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8636	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAQ3	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HV-A5A5	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	ASIAN	[Not Available]
+TCGA-FB-AAQ1	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAQ0	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAPZ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAPY	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAPU	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	ASIAN	NOT HISPANIC OR LATINO
+TCGA-FB-AAPS	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAPQ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-AAQ6	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-7922	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8317	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8315	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8005	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8003	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8002	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8001	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-Z5-AAPL	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-7925	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HV-A5A3	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	ASIAN	[Not Available]
+TCGA-HZ-7923	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HV-A5A4	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	ASIAN	[Not Available]
+TCGA-HZ-7920	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-7919	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-7918	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HV-AA8X	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	ASIAN	[Not Available]
+TCGA-HV-AA8V	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	ASIAN	[Not Available]
+TCGA-HV-A7OL	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	ASIAN	[Not Available]
+TCGA-HV-A5A6	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	ASIAN	[Not Available]
+TCGA-FB-A5VM	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-2J-AAB9	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	[Unknown]
+TCGA-2J-AABT	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	[Unknown]
+TCGA-3A-A9I7	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-3A-A9I5	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-2L-AAQL	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2L-AAQJ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	[Unknown]
+TCGA-2L-AAQI	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2L-AAQE	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2L-AAQA	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-FB-AAPP	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-2J-AABU	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-3A-A9IC	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-2J-AABR	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	[Unknown]
+TCGA-2J-AABO	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AABK	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AABF	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AABE	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AAB8	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AAB6	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AABA	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-2J-AABV	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-F2-6880	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Not Evaluated]
+TCGA-HZ-7926	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-FB-A545	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-A4P6	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-A4P5	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-F2-A8YN	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-F2-A7TX	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Not Evaluated]
+TCGA-F2-A44H	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-F2-A44G	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-3A-A9I9	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-F2-7273	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-3A-A9IB	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-3E-AAAZ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	HISPANIC OR LATINO
+TCGA-3E-AAAY	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-3A-A9J0	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-3A-A9IZ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	HISPANIC OR LATINO
+TCGA-3A-A9IX	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-3A-A9IU	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-3A-A9IH	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-FB-A78T	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-F2-7276	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUQ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-LB-A9Q5	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-LB-A8F3	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-LB-A7SX	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-L1-A7W4	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUW	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUV	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUU	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A5ST	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-7924	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-PZ-A5RE	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-8637	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	HISPANIC OR LATINO
+TCGA-IB-AAUO	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUN	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUM	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A7M4	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A7LX	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A6UG	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A6UF	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUS	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-US-A774	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-YY-A8LH	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-YB-A89D	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-XN-A8T3	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	HISPANIC OR LATINO
+TCGA-XD-AAUL	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-XD-AAUI	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-XD-AAUH	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-XD-AAUG	NO	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-US-A77J	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-M8-A5N4	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	[Not Evaluated]	[Not Evaluated]
+TCGA-US-A779	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-OE-A75W	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-S4-A8RP	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	[Not Evaluated]
+TCGA-S4-A8RO	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-S4-A8RM	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-RL-AAAS	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-RB-AA9M	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-Q3-AA2A	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-Q3-A5QY	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUP	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-US-A77G	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-AAUR	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7885	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7652	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	ASIAN	NOT HISPANIC OR LATINO
+TCGA-HZ-A8P0	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7649	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	[Unknown]	[Unknown]
+TCGA-HZ-A49H	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-A49I	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-A49G	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A5SS	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7654	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7647	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7646	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-A77O	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7645	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	[Unknown]	[Unknown]
+TCGA-IB-7644	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-A8P1	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-HZ-A4BH	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Not Evaluated]
+TCGA-IB-7891	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A5SQ	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-A5SP	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-IB-A5SO	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	[Unknown]
+TCGA-IB-8127	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-8126	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7897	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7651	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7893	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7890	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	[Unknown]	[Unknown]
+TCGA-IB-7889	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7888	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	BLACK OR AFRICAN AMERICAN	NOT HISPANIC OR LATINO
+TCGA-IB-7887	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	FEMALE	WHITE	NOT HISPANIC OR LATINO
+TCGA-IB-7886	YES	Pancreas-Adenocarcinoma Ductal Type	[Not Applicable]	Primary	MALE	WHITE	NOT HISPANIC OR LATINO
