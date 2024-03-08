@@ -1,6 +1,6 @@
 ####### Supplemental Datasets #########
 
-Supplemental_Dataset_1.csv: Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of follow up status for days from resection to recurrence (used for Kaplan-meier analysis). 
+Supplemental_Dataset_1.xlsx: Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of follow up status for days from resection to recurrence (used for Kaplan-meier analysis). 
 
 Metastasis site (i.e. liver, lung, other sire).
 "Cohort" column has whether patients were in liver or lung cohort (including resected and non-resected patients) 
@@ -10,7 +10,7 @@ Also, columns indicating whether the patient had a primary tumor resection ("Res
  
 Finally, columns with results for histology analyses of primary and mets, GSVA scores for pORG, pSUB and PurIST from primary or met samples, and DNA alterations in primary or met (for variants present in >9 patients)
 
-Supplemental_Dataset_1.xlsx: First sheet is duplicate of Supplemental_Dataset_1.csv, second sheet has speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. 
+Second sheet has speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. 
 
 Supplemental_Dataset_2.xlsx: Cox proportional hazards modeling results. 
 Multiple sheets, labeled multi for multivariable CPH and single for single variable.
