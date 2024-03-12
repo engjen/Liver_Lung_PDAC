@@ -14,6 +14,12 @@ Contents:
 7. TCR analysis TCR survival
 8. GSVA violins GSEA bar plots
 
+- **Figures made using R**
+1.  Figure 2 A-C [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/Figure_2A-C.R)
+2.  Figure 7D [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/Figure_7D.R)
+3.  Supplemental figure 4A [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/Supplemental_Figure_4A.R)
+4.  Supplemental figure 5 [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/Supplemental_Figure5A-D_scRNA.R)
+
 - **Large files** including raw image data, single cell image features, and detailed Adaptive TCRseq and DNA sequence data can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
 
 - **Additional analysis notebook** to load Adaptive TCR seq data and calculate TCR seq metrics found [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/20231222_TCR_seq_RNA_seq_data_processing.ipynb).
