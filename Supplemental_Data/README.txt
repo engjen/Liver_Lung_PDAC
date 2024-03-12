@@ -1,9 +1,9 @@
 ####### Supplemental Datasets #########
 
 Supplemental_Dataset_1.xlsx: 
-First sheet has patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of follow up status for days from resection to recurrence (used for Kaplan-meier analysis). 
+Sheet: Patient_Metadata - Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of follow up status for days from resection to recurrence (used for Kaplan-meier analysis). 
 
-Metastasis site (i.e. liver, lung, other sire).
+Metastasis site (i.e. liver, lung, other site).
 "Cohort" column has whether patients were in liver or lung cohort (including resected and non-resected patients) 
 "Recurrence_Sites_4" column has the metastatic recurrence sites for all resected patients
 
@@ -11,9 +11,9 @@ Also, columns indicating whether the patient had a primary tumor resection ("Res
  
 Finally, columns with results for histology analyses of primary and mets, GSVA scores for pORG, pSUB and PurIST from primary or met samples, and DNA alterations in primary or met (for variants present in >9 patients)
 
-Second sheet has specimen level RNA data, including GSVA scores and specimen site. Public_Specimen_ID column is the patient ID plus a suffix indicating primary tumor "-T", a second primary tumor specimen "-T2", metastasis "-M", a second met "-M2", a fine needle aspirate from the primary "-F" and a primary from rapid autopsy "-A-T".
+Sheet: RNA_Specimen_Metadata - Specimen level RNA data, including GSVA scores and specimen site. Public_Specimen_ID column is the patient ID plus a suffix indicating primary tumor "-T", a second primary tumor specimen "-T2", metastasis "-M", a second met "-M2", a fine needle aspirate from the primary "-F" and a primary from rapid autopsy "-A-T". To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and includes data derived from RNA and DNA data such as PurIST and GSVA scores and mutation status.
 
-Third sheet has speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. 
+Sheet: DNA_Specimen_Metadata - Speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and data derived from RNA and DNA data. 
 ________________________________________________
 Supplemental_Dataset_2.xlsx: Cox proportional hazards modeling results. 
 Multiple sheets, labeled multi for multivariable CPH and single for single variable.
@@ -28,13 +28,22 @@ p: P-value of the model
 model: for multivariable models, indicating which covariates were grouped into one model
 n: number of patients
 ________________________________________________
-Supplemental_Dataset_3: DESeq2 differentially expressed genes
+Supplemental_Dataset_3: RNA expression data and DESeq2 differentially expressed genes.
+Sheet: pORG_Up_55 - DESeq2 statistics for pORG gene set.
+Sheet: pSUB_Up_51 - DESeq2 statistics for pSUB gene set.
+Sheet: pORG_FactorFromModel - DESeq2 statistics for pORG factor listing all genes passing expression filter.
+Sheet: pSUB_FactorFromModel - DESeq2 statistics for pSUB factor listing all genes passing expression filter.
+Sheet: Kallisto_TPM - TPM (Transcripts Per Million - normalized for sequencing depth and gene length) values for all RNA specimens (from kallisto pipeline with rows reduced to unique HUGO symbols).
+Sheet: Kallisto_Counts - Gene level counts estimates for all RNA specimens (from kallisto pipeline with rows reduced to unique HUGO symbols).
+Sheet: edgeR_TMM – EdgeR filtered, normalized counts using TMM (Trimmed Median of Means - more robust between sample normalization compared to TMM, but not normalized for gene length) method. (based on tximport from kallisto pipeline with rows reduced to unique HUGO symbols after filtering and normalizing with EdgeR, ).
 ________________________________________________
-Supplemental_Dataset_4: The DNA dataset. Per mutation data.
+Supplemental_Dataset_4: Mutation calls from DNA xT panel dataset. 
+Sheet: TempusReportedVariants – Gene variants called by Tempus using their xT panel.  Columns include “Public_Patient_ID”, “Public_Specimen_ID”, “Protein” and “Nucleic_Acid” changes, “Alteration_Type” (including LOF and GOF when known, these categories are simplified for display on OncoPrints), “Classification” (mostly Somatic with one Germline), “Significance” (Biologically relevant or VUS), “Panel_Name” (two panel versions used), “VCF_File” containing annotating the alteration, “VCF_FileIdx”, numeric index of alteration in vcf file, “CHROM” chromosome, “POS” position, “ID”, “REF” reference allele, “ALT” alternative allele, “TUMOR_REF_COUNT”, “TUMOR_ALT_COUNT”, “TUMOR_VAF” variant allele frequency for tumor, “NORMAL_REF_COUNT”, “NORMAL_ALT_COUNT”, “NORMAL_VAF” variant allele frequency for normal, “INFO”	column from vcf file, “ANN_TYPE” matching annotation type parsed out from INFO column, “ANN_IMPACT” matching annotation impact parsed out from INFO column.  Copy number gain/loss calls are included in this sheet and for these, many columns are not relevant and are left blank or set to NA.
 ________________________________________________
-Supplemental_Dataset_5: GSEA hallmarks results for cohorts
+Supplemental_Dataset_5: : Gene Set Enrichment Analysis (GSEA) and Gene Set Variation Analysis (GSVA) results for HALLMARKs of cancer pathways.  Multiple Sheets. There are “TopVsBottom” quartile comparisons for pORG scores, pSUB scores, and PurIST scores in both Primary specimens and in Met specimens.  There are also comparisons between full Liver and Lung cohorts for Primary and for Met specimens.  Each comparison is split into up and down pathways and each sheet contains standard output fields from the GSEA analysis software.  The links are not active.  There are also sheets for GSVA analysis of Primary specimens, Met specimens, and all specimens together.  Each of these sheets contains relative pathway scores (for all 50 pathways) for each specimen in the respective sets.
 ________________________________________________
-Supplemental_Dataset_6: VIPER results for primary tumors
+Supplemental_Dataset_6: VIPER results for primary tumors.
+Sheet: VIPER for Primary Tumors - Viper Regulon scores for all Primary specimens.
 ________________________________________________
 Supplemental_Dataset_7.xlsx: multiplex immunohistochemistry data
 Includes the following multiple sheets:
