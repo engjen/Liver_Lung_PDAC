@@ -1,8 +1,14 @@
 ####### Supplemental Datasets #########
 
 Supplemental_Dataset_1.xlsx: 
+<<<<<<< HEAD
 Sheet: Patient_Metadata - Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of follow up status for days from resection to recurrence (used for Kaplan-meier analysis). 
 
+=======
+
+Sheet: Patient_Metadata - Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of follow up status for days from resection to recurrence (used for Kaplan-meier analysis). 
+
+>>>>>>> 6e72060997b914e02d61099bc9922b151473ea17
 Metastasis site (i.e. liver, lung, other site).
 "Cohort" column has whether patients were in liver or lung cohort (including resected and non-resected patients) 
 "Recurrence_Sites_4" column has the metastatic recurrence sites for all resected patients
@@ -12,8 +18,14 @@ Also, columns indicating whether the patient had a primary tumor resection ("Res
 Finally, columns with results for histology analyses of primary and mets, GSVA scores for pORG, pSUB and PurIST from primary or met samples, and DNA alterations in primary or met (for variants present in >9 patients)
 
 Sheet: RNA_Specimen_Metadata - Specimen level RNA data, including GSVA scores and specimen site. Public_Specimen_ID column is the patient ID plus a suffix indicating primary tumor "-T", a second primary tumor specimen "-T2", metastasis "-M", a second met "-M2", a fine needle aspirate from the primary "-F" and a primary from rapid autopsy "-A-T". To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and includes data derived from RNA and DNA data such as PurIST and GSVA scores and mutation status.
+<<<<<<< HEAD
 
 Sheet: DNA_Specimen_Metadata - Speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and data derived from RNA and DNA data. 
+=======
+
+Sheet: DNA_Specimen_Metadata - Speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and data derived from RNA and DNA data. 
+
+>>>>>>> 6e72060997b914e02d61099bc9922b151473ea17
 ________________________________________________
 Supplemental_Dataset_2.xlsx: Cox proportional hazards modeling results. 
 Multiple sheets, labeled multi for multivariable CPH and single for single variable.
@@ -28,6 +40,10 @@ p: P-value of the model
 model: for multivariable models, indicating which covariates were grouped into one model
 n: number of patients
 ________________________________________________
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6e72060997b914e02d61099bc9922b151473ea17
 Supplemental_Dataset_3: RNA expression data and DESeq2 differentially expressed genes.
 Sheet: pORG_Up_55 - DESeq2 statistics for pORG gene set.
 Sheet: pSUB_Up_51 - DESeq2 statistics for pSUB gene set.
