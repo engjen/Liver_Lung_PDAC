@@ -20,6 +20,14 @@ Contents:
 3.  Supplemental figure 4A [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/Supplemental_Figure_4A.R)
 4.  Supplemental figure 5 [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/Supplemental_Figure5A-D_scRNA.R)
 
+- **R scripts to develop pORG/pSUB gene sets, calculate PurIST subtyping and GSVA scores, and generate additional plots for figures**  (There are two scripts responsible for these tasks. The PublicAnalysis.R script and a SupportFunctions.R script.)  The main script includes instructions for downloading prerequisite, public data and software from public sources. It then performs the following tasks:
+1.  Setup paths and load scripts and data
+2.  Apply PurIST subtyping to PDAC samples
+3.  Generate pORG/pSUB gene sets and GSVA scores (for pORG/pSUB and Hallmarks gene sets)
+4.  Generate OncoPrint plots for figures
+5.  Generate some additional Kaplan-Meier plots for figures
+6.  Generate *.gct and *.cls files to reproduce GSEA analysis with the Broad GSEA software (also includes notes on settings used for analysis shown in publication)
+  
 - **Large files** including raw image data, single cell image features, and detailed Adaptive TCRseq and DNA sequence data can be found [here](https://www.synapse.org/#!Synapse:syn51068458/files/).
 
 - **Additional analysis notebook** to load Adaptive TCR seq data and calculate TCR seq metrics found [here](https://github.com/engjen/Liver_Lung_PDAC/blob/main/20231222_TCR_seq_RNA_seq_data_processing.ipynb).
