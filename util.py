@@ -72,10 +72,9 @@ def annotated_stripplot(plotting,ls_groups,label):
     annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
     ax, test_results = annot.apply_test().annotate()
     return(fig,ax,test_results)
-# this func not used
-def annotated_stripplot2(plotting,ls_groups,label):
+def annotated_stripplot3(plotting,ls_groups,label,hue):
     fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
-    sns.stripplot(**plotting,ax=ax,alpha=0.8,label=label)
+    sns.stripplot(**plotting,hue=hue,ax=ax,alpha=0.8,label=label,dodge=False)
     sns.boxplot(**plotting,ax=ax,
                        whiskerprops={'visible': False},showcaps=False,
                        #meanline=True,showmeans=True,medianprops={'visible': False},
@@ -83,9 +82,43 @@ def annotated_stripplot2(plotting,ls_groups,label):
                 showfliers=False,showbox=False)
     pairs = [item for item in itertools.combinations(ls_groups,2)]
     annot = Annotator(ax,pairs,**plotting)
-    annot.configure(test='test_ind',alternative='greater',comparisons_correction="fdr_bh",text_format='star', verbose=False)#'Mann-Whitney'
+    annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
     ax, test_results = annot.apply_test().annotate()
     return(fig,ax,test_results)
+# used
+#from statannotations.PValueFormat import PValueFormat
+def annotated_stripplot2(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='upper right',s=2):
+    # plotter = PValueFormat()
+    # plotter.configure()
+    plotting = {"data":df,"x":x,"y":y,"order":order,
+               "hue":hue,"hue_order":hue_order}
+    pairs = [((item,hue_order[0]),(item,hue_order[1])) for item in order]
+
+    fig,ax = plt.subplots(dpi=200,figsize=figsize)
+    f,a = plt.subplots()
+    sns.stripplot(**plotting,dodge=True,ax=ax,s=s,alpha=0.7)
+    sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
+                                   whiskerprops={'visible': False},meanline=True,showcaps=False,
+                           meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False) #,legend=False
+    annot = Annotator(a,pairs,**plotting,verbose=False)
+    h, l = ax.get_legend_handles_labels()
+    ax.legend(h[0:2],l[0:2],loc=loc)
+    annot.configure(test='t-test_ind',text_format="star")
+    annot.apply_test()
+    a, test_results = annot.apply_test().annotate()
+    plt.close(f)
+    annot = Annotator(ax,pairs,**plotting,verbose=False)
+    d_pval = {}
+    for res in test_results:
+        d_pval.update({res.data.group1[0]:res.data.pvalue})
+    pvalues = [d_pval[item] for item in order]
+    reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
+    formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(pvalues)]
+    if b_correct:
+        formatted_pvalues = [f'FDR={pvalue:.2}' for pvalue in list(corrected)]
+    annot.set_custom_annotations(formatted_pvalues)
+    annot.annotate()
+    return(fig, ax)
 
 def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
 
@@ -130,9 +163,34 @@ def km_plot(df,s_col,s_time,s_censor):
         durations = df_abun.loc[:,s_time]
         event_observed = df_abun.loc[:,s_censor]
         kmf.fit(durations,event_observed,label=s_group)
-        kmf.plot(ax=ax,ci_show=True,show_censors=True)
+        kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.15,censor_styles={"marker": "|"})
         print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
-    ax.set_title(f'{s_col}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
+    ax.set_title(f'{s_col.replace("_"," ")}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
+    ax.set_ylim(-0.05,1.05)
+    return(fig,ax,ls_order)
+
+def km_plot_overlay(df_km,ls_col,s_time,s_censor):
+    fig, ax = plt.subplots(figsize=(4,4),dpi=300)
+    ls_title = []
+    nl = '\n'
+    for s_col in ls_col:
+        df = df_km.loc[:,[s_col,s_time,s_censor]].dropna().copy()
+        results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
+                                        groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
+        kmf = KaplanMeierFitter()
+        
+        ls_order = sorted(df.loc[:,s_col].dropna().unique())
+        for s_group in ls_order:
+            #print(s_group)
+            df_abun = df[df.loc[:,s_col]==s_group]
+            durations = df_abun.loc[:,s_time]
+            event_observed = df_abun.loc[:,s_censor]
+            kmf.fit(durations,event_observed,label=s_group)
+            kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.15,censor_styles={"marker": "|"})
+            print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
+        s_title = f'{s_col.replace("_"," ")}: p={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}'
+        ls_title.append(s_title)
+    ax.set_title(f'{nl.join(ls_title)}')
     ax.set_ylim(-0.05,1.05)
     return(fig,ax,ls_order)
 
@@ -299,18 +357,18 @@ def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_por
     plt.tight_layout()
     return(fig,pvalues,corrected)
 
-def plot_violins3(df_both,s_stats,s_foci,s_comp,s_porg,hue='TCR_Met_Site',figsize=(3,3)):
+def plot_violins3(df_both,s_stats,s_foci,s_comp,s_porg,hue_order,hue='TCR_Met_Site',figsize=(3,3)):
     fig,ax=plt.subplots(dpi=300,figsize=figsize)
     if s_stats == 'non-parametric':
         sns.violinplot(data=df_both,y=s_foci,x=s_comp,ax=ax,alpha=0.2,linewidth=1,cut=0,
                        inner='quartile',color='white')#
     elif s_stats == 'mean':
         sns.violinplot(data=df_both,y=s_foci,x=s_comp,ax=ax,alpha=0.2,linewidth=1,cut=0,inner=None,
-                       color='white')
+                       color='white',scale='width')
         sns.boxplot(data=df_both,y=s_foci,x=s_comp,ax=ax,showmeans=True,medianprops={'visible': False},
                        whiskerprops={'visible': False},meanline=True,showcaps=False,
                        meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
-    sns.stripplot(data=df_both,y=s_foci,x=s_comp,hue=hue,s=8,dodge=False,ax=ax,jitter=0.2,alpha=0.8,
+    sns.stripplot(data=df_both,y=s_foci,x=s_comp,hue=hue,s=8,dodge=False,ax=ax,jitter=0.2,alpha=0.8,hue_order=hue_order,
                  palette='tab20') #
     ax.legend(bbox_to_anchor=(1,1),fontsize='small')
     ax.set_xticklabels(ax.get_xticklabels(),rotation=45,fontsize=8)
@@ -1661,8 +1719,11 @@ class HandlerEllipse(HandlerPatch):
         p.set_transform(trans)
         return [p]
     
-def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,mappable,hatch='//',height=0.4,figsize=(4,4),anchor=(1.25,1),x_label='NES',ncol=2):
-    my_cmap = mappable.get_cmap()
+def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,cmap,norm,hatch='//',height=0.4,figsize=(4,4),anchor=(1.25,1),x_label='NES',ncol=2):#mappable
+    # Choose colormap
+    N = len(norm.boundaries)
+    cmap2 = cm.get_cmap('RdYlBu_r', N-1)
+    colors = [mpl.colors.to_hex(cmap2(i)) for i in range(N-1)]
     fig, ax = plt.subplots(dpi=300,figsize=figsize)
     for idx, s_comp in enumerate(ls_plot_items):
         df_comp = df_plot_bar[df_plot_bar.comparison==s_comp]
@@ -1670,17 +1731,19 @@ def plot_double_bars_heat(ls_plot_items,df_plot_bar,d_labels,sorter_combined,map
         if idx == 0:
             indices = np.arange(len(df_comp.index))
             ax.barh(y=indices+height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
-                color=[my_cmap(item) for item in df_comp.FDR_color],label=s_comp,linewidth=1,
+               color=[colors[item[0]] for item in df_comp.FDR_color],
+                    label=s_comp,linewidth=1,
                     edgecolor='k',
                )
         else: 
             ax.barh(y=indices-height/2, width=df_comp.loc[sorter_combined,'NES'],height=height,
                     hatch=hatch,edgecolor='k',
-                color=[my_cmap(item) for item in df_comp.FDR_color],label=s_comp,linewidth=1,
+                color=[colors[item[0]] for item in df_comp.FDR_color],label=s_comp,linewidth=1,
                )
         ax.set_yticks(range(len(df_comp.index)))
         ax.set_yticklabels(df_comp.index)
-    fig.colorbar(mappable=mappable,ax=ax,label='FDR.q.val')
+    fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap),#mappable=mappable,
+                 ax=ax,label='FDR.q.val')
     if len(ls_plot_items) == 2:
         handles = [mpl.patches.Patch(facecolor='white', edgecolor='black',
                              label=d_labels[ls_plot_items[0]]),
@@ -1919,6 +1982,21 @@ def process_overlap2(df,df_meta,ls_site=['Blood_Type','Site','Sample_Type']):
     df_out = df.loc[:,~df.columns.str.contains('ST-')]
     #df_out = df_out.reset_index().rename({'index':'Sample'},axis=1)
     return(df_out)
+
+# function to calculate Cohen's d for independent samples
+def cohend(df_sp,x,y,ls_groups):
+    d1 = df_sp.loc[df_sp.loc[:,x] == ls_groups[0],y]
+    d2 = df_sp.loc[df_sp.loc[:,x] == ls_groups[1],y]
+    # calculate the size of samples
+    n1, n2 = len(d1), len(d2)
+    # calculate the variance of the samples
+    s1, s2 = np.var(d1, ddof=1), np.var(d2, ddof=1)
+    # calculate the pooled standard deviation
+    s = np.sqrt(((n1 - 1) * s1 + (n2 - 1) * s2) / (n1 + n2 - 2))
+    # calculate the means of the samples
+    u1, u2 = np.mean(d1), np.mean(d2)
+    # calculate the effect size
+    return (u1 - u2) / s
 
 # # organotropism and pORG (side by side axis)
 # sorter_combined =  ['HALLMARK_MYOGENESIS' ,'HALLMARK_CHOLESTEROL_HOMEOSTASIS',
