@@ -151,11 +151,11 @@ def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
     plt.close(fig)
     return(blobs_dog,fig)
 
-def km_plot(df,s_col,s_time,s_censor):
+def km_plot(df,s_col,s_time,s_censor,fontsize='medium',loc='upper center'):
     results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
                                     groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
     kmf = KaplanMeierFitter()
-    fig, ax = plt.subplots(figsize=(4,4),dpi=300)
+    fig, ax = plt.subplots(figsize=(4,4),dpi=400)
     ls_order = sorted(df.loc[:,s_col].dropna().unique())
     for s_group in ls_order:
         #print(s_group)
@@ -165,11 +165,43 @@ def km_plot(df,s_col,s_time,s_censor):
         kmf.fit(durations,event_observed,label=s_group)
         kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.15,censor_styles={"marker": "|"})
         print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
-    ax.set_title(f'{s_col.replace("_"," ")}\np={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}')
+    if len(ls_order)==2:
+        pvalue = f"{results.summary.p[0]:.2}"
+        demo_con_style(ax,0.7,0.93,0.78,0.9, f"P={pvalue}")
+        ax.set_title(f'{s_col.replace("_"," ")}')
+    else:
+        ax.set_title(f'{s_col.replace("_"," ")}\nP={results.summary.p[0]:.2}')
+    ls_n = [df.loc[:,s_col].value_counts()[item] for item in ls_order]
+    print(ls_n)
+    h,l = ax.get_legend_handles_labels()
+    print(l)
+    labels = [f'{item}\n(N={ls_n[idx]})' for idx, item in enumerate(l)]
+    ax.legend(labels=labels,handles=h,fancybox=False,frameon=False,loc=loc,fontsize=fontsize)
     ax.set_ylim(-0.05,1.05)
+    # Hide the right and top spines
+    ax.spines[['right', 'top']].set_visible(False)
     return(fig,ax,ls_order)
+    
+def demo_con_style(ax,x,top, bottom,ytext,pvalue):
+    connectionstyle = "bar,fraction=0.2"
+    x1 = x #x1, y1 = 0.8, 0.9
+    x2 = x  #x2, y2 = 0.8, 0.8
+    y1 = top
+    y2 = bottom
+    #ax.plot([x1, x2], [y1, y2], ".",color='white')
+    ax.annotate("",#pvalue,#
+                xy=(x1, y1), xycoords=ax.transAxes,#'data',
+                xytext=(x2, y2), textcoords=ax.transAxes,#'data',
+                arrowprops=dict(arrowstyle="-", color="k",
+                                #shrinkA=5, shrinkB=5,
+                                patchA=None, patchB=None,
+                                connectionstyle=connectionstyle,
+                                ),
+                )
+    ax.text(x+0.06, ytext, pvalue,transform=ax.transAxes,
+            ha="left", va="top",fontsize='medium')
 
-def km_plot_overlay(df_km,ls_col,s_time,s_censor):
+def km_plot_overlay(df_km,ls_col,s_time,s_censor,loc='upper center',fontsize='small'):
     fig, ax = plt.subplots(figsize=(4,4),dpi=300)
     ls_title = []
     nl = '\n'
@@ -188,12 +220,23 @@ def km_plot_overlay(df_km,ls_col,s_time,s_censor):
             kmf.fit(durations,event_observed,label=s_group)
             kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.15,censor_styles={"marker": "|"})
             print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
-        s_title = f'{s_col.replace("_"," ")}: p={results.summary.p[0]:.2} n={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}'
-        ls_title.append(s_title)
-    ax.set_title(f'{nl.join(ls_title)}')
+        s_title = f'{s_col.replace("_"," ")}: P={results.summary.p[0]:.2}' #N={[df.loc[:,s_col].value_counts()[item] for item in ls_order]}'
+        ls_n = [df.loc[:,s_col].value_counts()[item] for item in ls_order]
+        ls_title.append(ls_n)
+    ls_title = flatten(ls_title)
+    print(ls_title)
+    h,l = ax.get_legend_handles_labels()
+    print(l)
+    labels = [f'{item}\n(N={ls_title[idx]})' for idx, item in enumerate(l)]
+    ax.legend(labels=labels,handles=h,fancybox=False,frameon=False,loc=loc,fontsize=fontsize)
     ax.set_ylim(-0.05,1.05)
+    # Hide the right and top spines
+    ax.spines[['right', 'top']].set_visible(False)
     return(fig,ax,ls_order)
 
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+    
 def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
     cph = CoxPHFitter()  #penalizer=0.1
     if df.columns.isin(['Stage']).any():
@@ -1878,7 +1921,7 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor,s_tcr):
             except:
                 continue
             df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,[s_tcr,s_time,s_censor]].dropna()
-            df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'high',False:'low'})
+            df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'High',False:'Low'})
             fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
@@ -1923,7 +1966,7 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor,s_tcr):
             except:
                 continue
             df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,['Public_Patient_ID',s_tcr,s_time,s_censor]].dropna()
-            df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'high',False:'low'})
+            df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'High',False:'Low'})
             fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
