@@ -1,12 +1,12 @@
 ####### Supplemental Datasets #########
+________________________________________________
 
 Supplemental_Dataset_1.xlsx: 
 
-Sheet: Patient_Metadata - Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding, i.e. "1" means died and "0" means "alive" on vital status and Recurrence is a one hot encoding of recurrence , i.e. "1" means recurrence and "0" means no recurrence (used for Kaplan-meier analysis). 
+Sheet: Patient_Metadata - Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment.
+"Survival" column is a one hot encoding for vital status, i.e. "1" means died and "0" means "alive" (used for Kaplan-meier analysis and CPH modeling)
+"Recurrence" is a one hot encoding for  recurrence , i.e. "1" means recurrence and "0" means no recurrence (used for Kaplan-meier analysis CPH modeling). 
 
-=======
-
-Sheet: Patient_Metadata - Patient level data including survival/outcome data, clinical covariates such as age, grade, stage, sex, lymph nodes positive, lymphovascular invasion and neoadjuvant treatment. "Survival" is a one hot encoding on vital status and Recurrence is a one hot encoding of recurrence (used for Kaplan-meier analysis). 
 
 Metastasis site (i.e. liver, lung, other site).
 "Cohort" column has whether patients were in liver or lung cohort (including resected and non-resected patients) 
@@ -20,11 +20,8 @@ Sheet: RNA_Specimen_Metadata - Specimen level RNA data, including GSVA scores an
 
 
 Sheet: DNA_Specimen_Metadata - Speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and data derived from RNA and DNA data. 
-=======
-
-Sheet: DNA_Specimen_Metadata - Speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and data derived from RNA and DNA data. 
-
 ________________________________________________
+
 Supplemental_Dataset_2.xlsx: Cox proportional hazards modeling results. 
 Multiple sheets, labeled multi for multivariable CPH and single for single variable.
 The sheet name will include S, Surf or Survival if the outcome is overall survival
@@ -38,25 +35,29 @@ p: P-value of the model
 model: for multivariable models, indicating which covariates were grouped into one model
 n: number of patients
 ________________________________________________
-Supplemental_Dataset_3: Fraction of Patients with alterations in primary versus mets and liver versus lung cohort. We considered 32 genes that were altered in at least 10 patients (and BRCA1) in all patients with DNA sequencing and tested for significant differences using Fisher's Exact test. We then FDR corrected the pvalues. 
-_________________________________________________
-[OLD] Supplemental_Dataset_3 (took out of github repo - too large to store): RNA expression data and DESeq2 differentially expressed genes.
+
+Supplemental_Dataset_3: RNA expression data and DESeq2 differentially expressed genes.
 Sheet: pORG_Up_55 - DESeq2 statistics for pORG gene set.
 Sheet: pSUB_Up_51 - DESeq2 statistics for pSUB gene set.
 Sheet: pORG_FactorFromModel - DESeq2 statistics for pORG factor listing all genes passing expression filter.
 Sheet: pSUB_FactorFromModel - DESeq2 statistics for pSUB factor listing all genes passing expression filter.
-Sheet: Kallisto_TPM - TPM (Transcripts Per Million - normalized for sequencing depth and gene length) values for all RNA specimens (from kallisto pipeline with rows reduced to unique HUGO symbols).
-Sheet: Kallisto_Counts - Gene level counts estimates for all RNA specimens (from kallisto pipeline with rows reduced to unique HUGO symbols).
-Sheet: edgeR_TMM – EdgeR filtered, normalized counts using TMM (Trimmed Median of Means - more robust between sample normalization compared to TMM, but not normalized for gene length) method. (based on tximport from kallisto pipeline with rows reduced to unique HUGO symbols after filtering and normalizing with EdgeR, ).
+
 ________________________________________________
+
 Supplemental_Dataset_4: Mutation calls from DNA xT panel dataset. 
 Sheet: TempusReportedVariants – Gene variants called by Tempus using their xT panel.  Columns include “Public_Patient_ID”, “Public_Specimen_ID”, “Protein” and “Nucleic_Acid” changes, “Alteration_Type” (including LOF and GOF when known, these categories are simplified for display on OncoPrints), “Classification” (mostly Somatic with one Germline), “Significance” (Biologically relevant or VUS), “Panel_Name” (two panel versions used), “VCF_File” containing annotating the alteration, “VCF_FileIdx”, numeric index of alteration in vcf file, “CHROM” chromosome, “POS” position, “ID”, “REF” reference allele, “ALT” alternative allele, “TUMOR_REF_COUNT”, “TUMOR_ALT_COUNT”, “TUMOR_VAF” variant allele frequency for tumor, “NORMAL_REF_COUNT”, “NORMAL_ALT_COUNT”, “NORMAL_VAF” variant allele frequency for normal, “INFO”	column from vcf file, “ANN_TYPE” matching annotation type parsed out from INFO column, “ANN_IMPACT” matching annotation impact parsed out from INFO column.  Copy number gain/loss calls are included in this sheet and for these, many columns are not relevant and are left blank or set to NA.
+
+Sheet: Cohort - Fraction of Patients with alterations in liver versus lung cohort. We considered 31 genes that were altered in at least 10 patients in the dataset (and BRCA1) and tested for significant differences using Fisher's Exact test. We then FDR corrected the pvalues. 
+Sheet: Primary_vs_met - Fraction of (unmatched) patients with alterations in primary versus mets
 ________________________________________________
+
 Supplemental_Dataset_5: : Gene Set Enrichment Analysis (GSEA) and Gene Set Variation Analysis (GSVA) results for HALLMARKs of cancer pathways.  Multiple Sheets. There are “TopVsBottom” quartile comparisons for pORG scores, pSUB scores, and PurIST scores in both Primary specimens and in Met specimens.  There are also comparisons between full Liver and Lung cohorts for Primary and for Met specimens.  Each comparison is split into up and down pathways and each sheet contains standard output fields from the GSEA analysis software.  The links are not active.  There are also sheets for GSVA analysis of Primary specimens, Met specimens, and all specimens together.  Each of these sheets contains relative pathway scores (for all 50 pathways) for each specimen in the respective sets.
 ________________________________________________
+
 Supplemental_Dataset_6: VIPER results for primary tumors.
 Sheet: VIPER for Primary Tumors - Viper Regulon scores for all Primary specimens.
 ________________________________________________
+
 Supplemental_Dataset_7.xlsx: multiplex immunohistochemistry data
 Includes the following multiple sheets:
 sample_avg_density: patient level data including the mean density of each cell type per patient, cohort, pORG and pSUB scores and high or low pORG (based on cutoff of 0.0249). 
@@ -65,6 +66,7 @@ high_vs_low_porg: difference in density of cell types  (at the ROI level, not pa
 cell_type_gating: the gating scheme to get cell types
 lymphoid_aggregates: number of lymphoid aggregates identified in each patient's slide
 ________________________________________________
+
 Supplemental_Dataset_8.csv: Tcell receptor sequencing data metrics, summarized at the patient level. 
 Metrics will reflect whether they were from a blood sample or a tumor sample.
 Blood_Type: 
@@ -74,7 +76,9 @@ For patients without a resection, the blood was considered primary if it was col
 The blood was considered met blood if it was collected after patient had mets confirmed on imaging or within 30 days before the mets being detected on imaging
 Tumor_Type: primary if the patient's primary tumor had TCR seq, Met if it was a met
 ________________________________________________
-Supplemental_Dataset_9.xlsx: sheet 1: Putative KRAS-specific CDR3Seqs occuring in liver and lung cohort tumor or blood
+
+Supplemental_Dataset_9.xlsx: KRAS specific TCRs and shared/clonal TCR data
+ sheet 1: Putative KRAS-specific CDR3Seqs occuring in liver and lung cohort tumor or blood
  sheet 2: Shared/clonal sequences from liver or lung **per clone data**: sum of frequncy, average frequency, # pts. present in, specific for pathogen
  sheet 3: Shared/clonal sequences from liver or lung **per patient data**: CD3R frequncy per pateint per shared clonal sequence
  sheet 4: Shared/clonal sequences from all tumors **per patient data**: CD3R frequncy per pateint per shared clonal sequence (present in 25% of patients and in top 50 clones in at least 1 patient)
