@@ -59,37 +59,54 @@ import plotly.express as px
 
 codedir = os.getcwd()
 
-def annotated_stripplot(plotting,ls_groups,label):
-    fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
+def annotated_stripplot(plotting,ls_groups,label,b_correct=False,figsize=(2.4,3)):
+    '''
+    no hue, show pvalues
+    default no correction
+    '''
+    if figsize == 0:
+        fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
+    else:
+        fig, ax = plt.subplots(figsize=figsize,dpi=300)
+    
     sns.stripplot(**plotting,ax=ax,alpha=0.8,label=label)
-    sns.boxplot(**plotting,ax=ax,
-                       whiskerprops={'visible': False},showcaps=False,
-                       #meanline=True,showmeans=True,medianprops={'visible': False},
-                       medianprops={'color': 'k', 'ls': '-', 'lw': 1},#meanprops
-                showfliers=False,showbox=False)
+    sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
+                                   whiskerprops={'visible': False},meanline=True,showcaps=False,
+                           meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)
     pairs = [item for item in itertools.combinations(ls_groups,2)]
-    annot = Annotator(ax,pairs,**plotting)
-    annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
-    ax, test_results = annot.apply_test().annotate()
+    
+    h, l = ax.get_legend_handles_labels()
+    ax.legend().remove() #ax.legend(h[0:2],l[0:2],loc=loc,title="")
+    #dummy
+    f,a = plt.subplots()
+    annotd = Annotator(a,pairs,**plotting,verbose=False)
+    annotd.configure(test='t-test_ind',text_format="star")
+    annotd.apply_test()
+    a, test_results = annotd.apply_test().annotate()
+    plt.close(f)
+    #extract annotations
+    pvalues = []
+    pairs2 = []
+    for res in test_results:
+        pairs2.append((res.data.group1,res.data.group2))
+        pvalues.append(res.data.pvalue)
+    #correct
+    reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
+    formatted_pvalues = [f'P={pvalue:.2}' for pvalue in list(pvalues)]
+    if b_correct:
+        formatted_pvalues = [f'FDR={pvalue:.2}' for pvalue in list(corrected)]
+    # create real annotator
+    annot = Annotator(ax,pairs2,**plotting,verbose=False) #annot = Annotator(ax=ax, pairs=pairs2,data=df_numbers,x=x,y=y,order=order)
+    annot.configure(fontsize='small')
+    annot.set_custom_annotations(formatted_pvalues)
+    annot.annotate()
     return(fig,ax,test_results)
-def annotated_stripplot3(plotting,ls_groups,label,hue):
-    fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
-    sns.stripplot(**plotting,hue=hue,ax=ax,alpha=0.8,label=label,dodge=False)
-    sns.boxplot(**plotting,ax=ax,
-                       whiskerprops={'visible': False},showcaps=False,
-                       #meanline=True,showmeans=True,medianprops={'visible': False},
-                       medianprops={'color': 'k', 'ls': '-', 'lw': 1},#meanprops
-                showfliers=False,showbox=False)
-    pairs = [item for item in itertools.combinations(ls_groups,2)]
-    annot = Annotator(ax,pairs,**plotting)
-    annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
-    ax, test_results = annot.apply_test().annotate()
-    return(fig,ax,test_results)
-# used
-#from statannotations.PValueFormat import PValueFormat
-def annotated_stripplot2(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='upper right',s=2):
-    # plotter = PValueFormat()
-    # plotter.configure()
+    
+def annotated_stripplot_hue(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='upper right',s=2):
+    '''
+    with hue, show pvalues, default FDR corrected 
+    '''
+
     plotting = {"data":df,"x":x,"y":y,"order":order,
                "hue":hue,"hue_order":hue_order}
     pairs = [((item,hue_order[0]),(item,hue_order[1])) for item in order]
@@ -99,10 +116,10 @@ def annotated_stripplot2(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='
     sns.stripplot(**plotting,dodge=True,ax=ax,s=s,alpha=0.7)
     sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
                                    whiskerprops={'visible': False},meanline=True,showcaps=False,
-                           meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False) #,legend=False
+                           meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False) 
     annot = Annotator(a,pairs,**plotting,verbose=False)
     h, l = ax.get_legend_handles_labels()
-    ax.legend(h[0:2],l[0:2],loc=loc)
+    ax.legend(h[0:2],l[0:2],loc=loc,title=hue)
     annot.configure(test='t-test_ind',text_format="star")
     annot.apply_test()
     a, test_results = annot.apply_test().annotate()
@@ -120,6 +137,49 @@ def annotated_stripplot2(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='
     annot.annotate()
     return(fig, ax)
 
+def annotated_boxplot(plotting,pairs):
+    '''
+    no hue, mann whitney, no corrections
+    '''
+    fig,ax=plt.subplots(dpi=300,figsize=(4 + len(pairs)*.7,3.5))
+    sns.boxplot(**plotting,showfliers=False,ax=ax,palette='muted')
+    sns.stripplot(**plotting,palette='dark',ax=ax,alpha=0.8)#s=2,
+    #create dummy annotator
+    f, a = plt.subplots()
+    annotator = Annotator(ax=a, pairs=pairs,**plotting)
+    a, test_results  = annotator.configure(test='Mann-Whitney', text_format='full').apply_test().annotate()
+    plt.close(f) # title = [f"{res.data.pvalue:.2}" for res in test_results]# a.set_title("P=" + ", ".join(title))
+    # extract pvalues
+    pairs2 = []
+    for res in test_results:
+        pairs2.append((res.data.group1,res.data.group2))
+        print(f'{res.data.group1} vs. {res.data.group2}\n p={res.data.pvalue:.2}')
+    # create real annotator
+    annot = Annotator(ax=ax, pairs=pairs2,**plotting)
+    formatted_pvalues = [f"P={res.data.pvalue:.2}" for res in test_results]
+    annot.configure(fontsize='large')
+    annot.set_custom_annotations(formatted_pvalues)
+    annot.annotate()
+    plt.tight_layout()
+    return(fig,ax, test_results)
+    
+def annotated_stripplot3(plotting,ls_groups,label,hue):
+    '''
+    with hue, default ttest FDR corrected, stars
+    '''
+    fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
+    sns.stripplot(**plotting,hue=hue,ax=ax,alpha=0.8,label=label,dodge=False)
+    sns.boxplot(**plotting,ax=ax,
+                       whiskerprops={'visible': False},showcaps=False,
+                       #meanline=True,showmeans=True,medianprops={'visible': False},
+                       medianprops={'color': 'k', 'ls': '-', 'lw': 1},#meanprops
+                showfliers=False,showbox=False)
+    pairs = [item for item in itertools.combinations(ls_groups,2)]
+    annot = Annotator(ax,pairs,**plotting)
+    annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
+    ax, test_results = annot.apply_test().annotate()
+    return(fig,ax,test_results)
+    
 def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
 
     blobs_dog = blob_dog(image_gray,  min_sigma=min_sigma, max_sigma=max_sigma, threshold=threshold,exclude_border=exclude_border)
@@ -163,7 +223,7 @@ def km_plot(df,s_col,s_time,s_censor,fontsize='medium',loc='upper center'):
         durations = df_abun.loc[:,s_time]
         event_observed = df_abun.loc[:,s_censor]
         kmf.fit(durations,event_observed,label=s_group)
-        kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.15,censor_styles={"marker": "|"})
+        kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.08,censor_styles={"marker": "|"})
         print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
     if len(ls_order)==2:
         pvalue = f"{results.summary.p[0]:.2}"
