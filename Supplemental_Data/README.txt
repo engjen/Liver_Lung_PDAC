@@ -7,7 +7,6 @@ Sheet: Patient_Metadata - Patient level data including survival/outcome data, cl
 "Survival" column is a one hot encoding for vital status, i.e. "1" means died and "0" means "alive" (used for Kaplan-meier analysis and CPH modeling)
 "Recurrence" is a one hot encoding for  recurrence , i.e. "1" means recurrence and "0" means no recurrence (used for Kaplan-meier analysis CPH modeling). 
 
-
 Metastasis site (i.e. liver, lung, other site).
 "Cohort" column has whether patients were in liver or lung cohort (including resected and non-resected patients) 
 "Recurrence_Sites_4" column has the metastatic recurrence sites for all resected patients
@@ -16,8 +15,9 @@ Also, columns indicating whether the patient had a primary tumor resection ("Res
  
 Finally, columns with results for histology analyses of primary and mets, GSVA scores for pORG, pSUB and PurIST from primary or met samples, and DNA alterations in primary or met (for variants present in >9 patients)
 
-Sheet: RNA_Specimen_Metadata - Specimen level RNA data, including GSVA scores and specimen site. Public_Specimen_ID column is the patient ID plus a suffix indicating primary tumor "-T", a second primary tumor specimen "-T2", metastasis "-M", a second met "-M2", a fine needle aspirate from the primary "-F" and a primary from rapid autopsy "-A-T". To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and includes data derived from RNA and DNA data such as PurIST and GSVA scores and mutation status.
+For this sheet, a blank cell is NA
 
+Sheet: RNA_Specimen_Metadata - Specimen level RNA data, including GSVA scores and specimen site. Public_Specimen_ID column is the patient ID plus a suffix indicating primary tumor "-T", a second primary tumor specimen "-T2", metastasis "-M", a second met "-M2", a fine needle aspirate from the primary "-F" and a primary from rapid autopsy "-A-T". To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and includes data derived from RNA and DNA data such as PurIST and GSVA scores and mutation status.
 
 Sheet: DNA_Specimen_Metadata - Speciemen level DNA data: tumor mutation burden (TMB), estimated tumor cellularity (from DNA or pathologist), Microsatellite Instability, Normal Sample Source and whether or not the specimen has a homologous recombination (HR) or DNA damage repair (DDR) alteration. To facilitate analysis and generating figures, this sheet also repeats selected patient level metadata and data derived from RNA and DNA data. 
 ________________________________________________
@@ -41,13 +41,11 @@ Sheet: pORG_Up_55 - DESeq2 statistics for pORG gene set.
 Sheet: pSUB_Up_51 - DESeq2 statistics for pSUB gene set.
 Sheet: pORG_FactorFromModel - DESeq2 statistics for pORG factor listing all genes passing expression filter.
 Sheet: pSUB_FactorFromModel - DESeq2 statistics for pSUB factor listing all genes passing expression filter.
-
 ________________________________________________
 
-Supplemental_Dataset_4: Mutation calls from DNA xT panel dataset. 
-Sheet: TempusReportedVariants – Gene variants called by Tempus using their xT panel.  Columns include “Public_Patient_ID”, “Public_Specimen_ID”, “Protein” and “Nucleic_Acid” changes, “Alteration_Type” (including LOF and GOF when known, these categories are simplified for display on OncoPrints), “Classification” (mostly Somatic with one Germline), “Significance” (Biologically relevant or VUS), “Panel_Name” (two panel versions used), “VCF_File” containing annotating the alteration, “VCF_FileIdx”, numeric index of alteration in vcf file, “CHROM” chromosome, “POS” position, “ID”, “REF” reference allele, “ALT” alternative allele, “TUMOR_REF_COUNT”, “TUMOR_ALT_COUNT”, “TUMOR_VAF” variant allele frequency for tumor, “NORMAL_REF_COUNT”, “NORMAL_ALT_COUNT”, “NORMAL_VAF” variant allele frequency for normal, “INFO”	column from vcf file, “ANN_TYPE” matching annotation type parsed out from INFO column, “ANN_IMPACT” matching annotation impact parsed out from INFO column.  Copy number gain/loss calls are included in this sheet and for these, many columns are not relevant and are left blank or set to NA.
-
-Sheet: Cohort - Fraction of Patients with alterations in liver versus lung cohort. We considered 31 genes that were altered in at least 10 patients in the dataset (and BRCA1) and tested for significant differences using Fisher's Exact test. We then FDR corrected the pvalues. 
+Supplemental_Dataset_4: Mutation and CNV calls from DNA xT panel dataset. 
+Sheet: Reported_Alterations – Gene variants called by Tempus using their xT panel.  Columns include “Public_Patient_ID”, “Public_Specimen_ID”, “Protein” and “Nucleic_Acid” changes, “Alteration_Type” (including LOF and GOF when known, these categories are simplified for display on OncoPrints), “Classification” (mostly Somatic with one Germline), “Significance” (Biologically relevant or VUS), “Panel_Name” (two panel versions used), “VCF_File” containing annotating the alteration, “VCF_FileIdx”, numeric index of alteration in vcf file, “CHROM” chromosome, “POS” position, “ID”, “REF” reference allele, “ALT” alternative allele, “TUMOR_REF_COUNT”, “TUMOR_ALT_COUNT”, “TUMOR_VAF” variant allele frequency for tumor, “NORMAL_REF_COUNT”, “NORMAL_ALT_COUNT”, “NORMAL_VAF” variant allele frequency for normal, “INFO”	column from vcf file, “ANN_TYPE” matching annotation type parsed out from INFO column, “ANN_IMPACT” matching annotation impact parsed out from INFO column.  Copy number gain/loss calls are included in this sheet and for these, many columns are not relevant and are left blank or set to NA.
+Sheet: Lung_vs_Liver - Fraction of Patients with alterations in lung versus liver cohort. We considered 31 genes that were altered in at least 10 patients in the dataset (and BRCA1) and tested for significant differences using Fisher's Exact test. We then FDR corrected the pvalues. 
 Sheet: Primary_vs_met - Fraction of (unmatched) patients with alterations in primary versus mets
 ________________________________________________
 
@@ -82,3 +80,4 @@ Supplemental_Dataset_9.xlsx: KRAS specific TCRs and shared/clonal TCR data
  sheet 2: Shared/clonal sequences from liver or lung **per clone data**: sum of frequncy, average frequency, # pts. present in, specific for pathogen
  sheet 3: Shared/clonal sequences from liver or lung **per patient data**: CD3R frequncy per pateint per shared clonal sequence
  sheet 4: Shared/clonal sequences from all tumors **per patient data**: CD3R frequncy per pateint per shared clonal sequence (present in 25% of patients and in top 50 clones in at least 1 patient)
+________________________________________________
