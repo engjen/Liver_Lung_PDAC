@@ -58,29 +58,34 @@ from anndata import AnnData
 import plotly.express as px
 
 codedir = os.getcwd()
-
-def annotated_stripplot(plotting,ls_groups,label,b_correct=False,figsize=(2.4,3)):
+def plot_violins(plotting,ls_groups,b_correct=False,figsize=(2.4,3)):
     '''
-    no hue, show pvalues
-    default no correction
     '''
     if figsize == 0:
         fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
     else:
         fig, ax = plt.subplots(figsize=figsize,dpi=300)
-    
-    sns.stripplot(**plotting,ax=ax,alpha=0.8,label=label)
-    sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
-                                   whiskerprops={'visible': False},meanline=True,showcaps=False,
-                           meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)
     pairs = [item for item in itertools.combinations(ls_groups,2)]
-    
-    h, l = ax.get_legend_handles_labels()
-    ax.legend().remove() #ax.legend(h[0:2],l[0:2],loc=loc,title="")
+    sns.violinplot(**plotting,ax=ax,alpha=0.2,linewidth=1,cut=0,inner=None,hue_order=ls_groups,color='white')
+    sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},whiskerprops={'visible': False},meanline=True,showcaps=False,meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
+    sns.stripplot(**plotting,s=4,dodge=True,ax=ax,jitter=0.2,alpha=0.8,hue_order=ls_groups) #
+    #dummy
+    pvalues, pairs2, test_results = extract_pvals(plotting,pairs,test='t-test_ind')
+    #correct
+    reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
+    formatted_pvalues = [f'P={pvalue:.2}' for pvalue in list(pvalues)]
+    if b_correct:
+        formatted_pvalues = [f'FDR={pvalue:.2}' for pvalue in list(corrected)]
+    # create real annotator
+    ax = real_annotator(plotting,pairs2,formatted_pvalues,ax)
+    ax = labels_with_n(plotting,ls_groups,ax)
+    return(fig,ax,test_results)
+
+def extract_pvals(plotting,pairs,test='t-test_ind'):
     #dummy
     f,a = plt.subplots()
     annotd = Annotator(a,pairs,**plotting,verbose=False)
-    annotd.configure(test='t-test_ind',text_format="star")
+    annotd.configure(test=test,text_format="star")
     annotd.apply_test()
     a, test_results = annotd.apply_test().annotate()
     plt.close(f)
@@ -90,19 +95,66 @@ def annotated_stripplot(plotting,ls_groups,label,b_correct=False,figsize=(2.4,3)
     for res in test_results:
         pairs2.append((res.data.group1,res.data.group2))
         pvalues.append(res.data.pvalue)
+    return(pvalues, pairs2, test_results)
+    
+def real_annotator(plotting,pairs2,formatted_pvalues,ax):
+    annot = Annotator(ax,pairs2,**plotting,verbose=False)
+    annot.configure(fontsize='small')
+    annot.set_custom_annotations(formatted_pvalues)
+    annot.annotate()
+    return(ax)
+
+def labels_with_n(plotting,ls_groups,ax):
+    # labels with N
+    linebreak = '\n'
+    df_mean = plotting['data']
+    s_group = plotting['x']
+    if len(ls_groups)==2:
+        xlabels = [f'{ls_groups[0]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[0]])})',
+               f'{ls_groups[1]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[1]])})']
+    elif len(ls_groups)==3:
+        xlabels = [f'{ls_groups[0]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[0]])})',
+               f'{ls_groups[1]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[1]])})',
+                  f'{ls_groups[2]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[2]])})']
+    elif len(ls_groups)==4:
+        xlabels = [f'{ls_groups[0]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[0]])})',
+               f'{ls_groups[1]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[1]])})',
+                  f'{ls_groups[2]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[2]])})',
+               f'{ls_groups[3]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[3]])})']
+    else:
+        return(ax)
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel(ax.get_xlabel().replace("_"," "))
+    ax.set_ylabel(ax.get_ylabel().replace("_"," "))
+    return(ax)
+        
+def annotated_stripplot(plotting,ls_groups,b_correct=False,figsize=(2.4,3),s=4):
+    '''
+    no hue, show pvalues
+    default no correction
+    '''
+    if figsize == 0:
+        fig, ax = plt.subplots(figsize=(1.3*len(ls_groups),3.2),dpi=300)
+    else:
+        fig, ax = plt.subplots(figsize=figsize,dpi=300)
+    sns.stripplot(**plotting,ax=ax,alpha=0.8,label='__',s=s)
+    sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
+                                   whiskerprops={'visible': False},meanline=True,showcaps=False,
+                           meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)
+    pairs = [item for item in itertools.combinations(ls_groups,2)]
+    pvalues, pairs2, test_results = extract_pvals(plotting,pairs)
     #correct
     reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
     formatted_pvalues = [f'P={pvalue:.2}' for pvalue in list(pvalues)]
     if b_correct:
         formatted_pvalues = [f'FDR={pvalue:.2}' for pvalue in list(corrected)]
     # create real annotator
-    annot = Annotator(ax,pairs2,**plotting,verbose=False) #annot = Annotator(ax=ax, pairs=pairs2,data=df_numbers,x=x,y=y,order=order)
-    annot.configure(fontsize='small')
-    annot.set_custom_annotations(formatted_pvalues)
-    annot.annotate()
+    ax = real_annotator(plotting,pairs2,formatted_pvalues,ax)
+    ax = labels_with_n(plotting,ls_groups,ax)
+    plt.tight_layout()
     return(fig,ax,test_results)
     
-def annotated_stripplot_hue(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='upper right',s=2):
+def annotated_stripplot_hue(df,x,y,hue,order,hue_order,figsize,b_correct=True,loc='upper right',s=2,b_box=False):
     '''
     with hue, show pvalues, default FDR corrected 
     '''
@@ -114,8 +166,11 @@ def annotated_stripplot_hue(df,x,y,hue,order,hue_order,figsize,b_correct=True,lo
     fig,ax = plt.subplots(dpi=200,figsize=figsize)
     f,a = plt.subplots()
     sns.stripplot(**plotting,dodge=True,ax=ax,s=s,alpha=0.7)
-    sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
-                                   whiskerprops={'visible': False},meanline=True,showcaps=False,
+    if b_box:
+        sns.boxplot(**plotting,ax=ax,showfliers=False,saturation=0.6,linewidth=0.5)
+    else:
+        sns.boxplot(**plotting,ax=ax,showmeans=True,medianprops={'visible': False},
+                                whiskerprops={'visible': False},meanline=True,showcaps=False,
                            meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False) 
     annot = Annotator(a,pairs,**plotting,verbose=False)
     h, l = ax.get_legend_handles_labels()
@@ -137,31 +192,35 @@ def annotated_stripplot_hue(df,x,y,hue,order,hue_order,figsize,b_correct=True,lo
     annot.annotate()
     return(fig, ax)
 
-def annotated_boxplot(plotting,pairs):
+def annotated_stripplot_pairs(plotting,pairs,order,test='Mann-Whitney'):
     '''
     no hue, mann whitney, no corrections
     '''
-    fig,ax=plt.subplots(dpi=300,figsize=(4 + len(pairs)*.7,3.5))
-    sns.boxplot(**plotting,showfliers=False,ax=ax,palette='muted')
-    sns.stripplot(**plotting,palette='dark',ax=ax,alpha=0.8)#s=2,
+    fig,ax=plt.subplots(dpi=300,figsize=(4+ len(pairs)*.7,3.5))
     #create dummy annotator
     f, a = plt.subplots()
     annotator = Annotator(ax=a, pairs=pairs,**plotting)
-    a, test_results  = annotator.configure(test='Mann-Whitney', text_format='full').apply_test().annotate()
-    plt.close(f) # title = [f"{res.data.pvalue:.2}" for res in test_results]# a.set_title("P=" + ", ".join(title))
+    a, test_results  = annotator.configure(test=test, text_format='full',verbose=0).apply_test().annotate()
+    plt.close(f)
     # extract pvalues
     pairs2 = []
+    #order = []
     for res in test_results:
         pairs2.append((res.data.group1,res.data.group2))
-        print(f'{res.data.group1} vs. {res.data.group2}\n p={res.data.pvalue:.2}')
+        # order.append(res.data.group1)
+        # order.append(res.data.group2)
+    print(pairs2)
+    print(order)
+    sns.stripplot(**plotting,ax=ax,alpha=0.8,order=order)
+    sns.boxplot(**plotting,ax=ax,order=order,showmeans=True,medianprops={'visible': False}, whiskerprops={'visible': False},meanline=True,showcaps=False,meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)
     # create real annotator
-    annot = Annotator(ax=ax, pairs=pairs2,**plotting)
+    annot = Annotator(ax=ax, pairs=pairs2,**plotting,order=order)
     formatted_pvalues = [f"P={res.data.pvalue:.2}" for res in test_results]
-    annot.configure(fontsize='large')
+    annot.configure(fontsize='large',verbose=0)
     annot.set_custom_annotations(formatted_pvalues)
     annot.annotate()
     plt.tight_layout()
-    return(fig,ax, test_results)
+    return(fig,ax, test_results,order,pairs2)
     
 def annotated_stripplot3(plotting,ls_groups,label,hue):
     '''
@@ -211,11 +270,37 @@ def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
     plt.close(fig)
     return(blobs_dog,fig)
 
-def km_plot(df,s_col,s_time,s_censor,fontsize='medium',loc='upper center'):
+
+def correlation_regplot(df_merge,s_tum,s_marker,alpha=0.05,b_legend=False):    
+    '''
+    df_merge: dataframe with two columns to correlate
+    s_tum: x value
+    s_marker: y value
+    '''
+    try:
+        r, pvalue = stats.spearmanr(a=df_merge.loc[:,s_tum], b=df_merge.loc[:,s_marker])
+        #print(pvalue)
+    except:
+        print(f'skipping {s_marker}')
+        pvalue=1
+    if pvalue < alpha:
+        fig, ax = plt.subplots(figsize=(3,3),dpi=300)
+        sns.regplot(x=s_tum, y=s_marker, data=df_merge,ax=ax)  
+        ax.set_title(f'{s_marker}\n vs {s_tum}\nSpearman r={r:.2f} p={pvalue:.2f} n={len(df_merge)}') 
+        if b_legend:
+            ax.legend(bbox_to_anchor=(1.01,.3))
+        plt.tight_layout()
+    else:
+        fig=None
+        ax=None
+    return(fig,ax)
+
+def km_plot(df,s_col,s_time,s_censor,loc='upper center',fontsize='medium',figsize=(4,4),b_pval=True):
+    df = df.loc[:,[s_col,s_time,s_censor]].dropna().copy()
     results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
                                     groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
     kmf = KaplanMeierFitter()
-    fig, ax = plt.subplots(figsize=(4,4),dpi=400)
+    fig, ax = plt.subplots(figsize=figsize,dpi=400)
     ls_order = sorted(df.loc[:,s_col].dropna().unique())
     for s_group in ls_order:
         #print(s_group)
@@ -225,12 +310,13 @@ def km_plot(df,s_col,s_time,s_censor,fontsize='medium',loc='upper center'):
         kmf.fit(durations,event_observed,label=s_group)
         kmf.plot(ax=ax,ci_show=True,show_censors=True,ci_alpha=0.08,censor_styles={"marker": "|"})
         print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
-    if len(ls_order)==2:
+    if b_pval:#len(ls_order)==2:
         pvalue = f"{results.summary.p[0]:.2}"
-        demo_con_style(ax,0.7,0.93,0.78,0.9, f"P={pvalue}")
+        demo_con_style(ax,0.70,0.93,0.78,0.9, f"P={pvalue}")
         ax.set_title(f'{s_col.replace("_"," ")}')
     else:
         ax.set_title(f'{s_col.replace("_"," ")}\nP={results.summary.p[0]:.2}')
+    pvalue_int = results.summary.p[0]
     ls_n = [df.loc[:,s_col].value_counts()[item] for item in ls_order]
     print(ls_n)
     h,l = ax.get_legend_handles_labels()
@@ -240,7 +326,10 @@ def km_plot(df,s_col,s_time,s_censor,fontsize='medium',loc='upper center'):
     ax.set_ylim(-0.05,1.05)
     # Hide the right and top spines
     ax.spines[['right', 'top']].set_visible(False)
-    return(fig,ax,ls_order)
+    ax.set_ylabel(f'Probability of {s_censor}')
+    ax.set_xlabel(s_time)
+    plt.tight_layout()
+    return(fig,ax,pvalue_int)
     
 def demo_con_style(ax,x,top, bottom,ytext,pvalue):
     connectionstyle = "bar,fraction=0.2"
@@ -261,8 +350,8 @@ def demo_con_style(ax,x,top, bottom,ytext,pvalue):
     ax.text(x+0.06, ytext, pvalue,transform=ax.transAxes,
             ha="left", va="top",fontsize='medium')
 
-def km_plot_overlay(df_km,ls_col,s_time,s_censor,loc='upper center',fontsize='small'):
-    fig, ax = plt.subplots(figsize=(4,4),dpi=300)
+def km_plot_overlay(df_km,ls_col,s_time,s_censor,loc='upper center',fontsize='small',figsize=(4,4)):
+    fig, ax = plt.subplots(figsize=figsize,dpi=300)
     ls_title = []
     nl = '\n'
     for s_col in ls_col:
@@ -306,13 +395,13 @@ def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
     cph.plot(ax=ax)
     pvalue = cph.summary.p[s_multi]
     hr = cph.summary.loc[:,'exp(coef)'][s_multi]
-    ax.set_title(f'{s_multi}\nHR={hr:.2},p={pvalue:.2} n={(len(df.dropna()))}')
+    ax.set_title(f'{s_multi}\nHR={hr:.2},P={pvalue:.2} N={(len(df.dropna()))}')
     plt.tight_layout()
     return(fig,cph)
         
 def plot_pearson(df_pri,s_porg,s_foci,s_stats,ls_plots=['Primaries','Mets','Both']):
     pvalues = []
-    fig,ax=plt.subplots(1,len(ls_plots),figsize=(len(ls_plots)*3.3,2.7), sharex='col',sharey='row',squeeze=False,dpi=200)
+    fig,ax=plt.subplots(1,len(ls_plots),figsize=(len(ls_plots)*3.3,3.5), sharex='col',sharey='row',squeeze=False,dpi=200)
     ax = ax.ravel()
     for idx,s_met_pri in enumerate(ls_plots):
         #print(s_met_pri)
@@ -322,7 +411,7 @@ def plot_pearson(df_pri,s_porg,s_foci,s_stats,ls_plots=['Primaries','Mets','Both
             b_met = df_pri.Tumor_Type=='Primary'#~(df_pri.Patient_Specimen_ID.str.contains('-M',na=True))
         else:
             b_met = df_pri.Public_Patient_ID.str.contains('ST-',na=False)
-        sns.regplot(data=df_pri.loc[b_met,[s_porg,s_foci]],x=s_foci,y=s_porg,label=s_met_pri,ax=ax[idx])
+        sns.regplot(data=df_pri.loc[b_met,[s_porg,s_foci]],x=s_foci,y=s_porg,label=s_met_pri,ax=ax[idx],color="tab:blue",scatter_kws={'s':3})
         y = df_pri.loc[b_met,[s_foci,s_porg]].dropna().loc[:,s_foci]
         x = df_pri.loc[y.index,s_porg]
         if s_stats == 'non-parametric':
@@ -333,8 +422,8 @@ def plot_pearson(df_pri,s_porg,s_foci,s_stats,ls_plots=['Primaries','Mets','Both
         if idx > 0:
             ax[idx].set_ylabel('')
         else:
-            ax[idx].set_ylabel(s_porg.replace('trim_padj_0.2_',''))
-        ax[idx].set_title(f'{s_met_pri} r={statistic:.3} p={pvalue:.3}')
+            ax[idx].set_ylabel(s_porg.replace('trim_padj_0.2_','').replace("_"," "))
+        ax[idx].set_title(f'{s_met_pri} r={statistic:.3} P={pvalue:.3} N={len(x)}')
     plt.tight_layout()
     return(fig, pvalues)
 
@@ -418,18 +507,18 @@ def violin_stats2(df_pri,d_order,s_foci,s_stats):
         d_pval.update({s_cat:pvalue})
     return(df_both,d_pval,order)
 
-def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_porg,b_correct=False,figsize=(3,3)):
+def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_porg,b_correct=False,figsize=(3,3),s=4,b_title=True,alpha=0.8):
     fig,ax=plt.subplots(dpi=300,figsize=figsize)
     hue_order = df_both.sort_values(by=['x','hue']).color.unique()
     if s_stats == 'non-parametric':
-        sns.violinplot(data=df_both,y=s_foci,x='color',ax=ax,alpha=0.2,linewidth=1,cut=0,inner='quartile',order=hue_order,color='white')#
+        sns.violinplot(data=df_both,y=s_foci,x='color',ax=ax,alpha=1,linewidth=1,cut=0,inner='quartile',order=hue_order,color='white')#
     elif s_stats == 'mean':
-        sns.violinplot(data=df_both,y=s_foci,x='color',ax=ax,alpha=0.2,linewidth=1,cut=0,inner=None,
+        sns.violinplot(data=df_both,y=s_foci,x='color',ax=ax,alpha=1,linewidth=1,cut=0,inner=None,
                        order=hue_order,color='white')
         sns.boxplot(data=df_both,y=s_foci,x='color',ax=ax,showmeans=True,medianprops={'visible': False},
                        whiskerprops={'visible': False},meanline=True,showcaps=False,order=hue_order,
                        meanprops={'color': 'k', 'ls': '-', 'lw': 2},showfliers=False,showbox=False)#
-    sns.stripplot(data=df_both,y=s_foci,x='color',s=4,dodge=True,ax=ax,palette=d_colorblind,jitter=0.2,alpha=0.8,order=hue_order) #
+    sns.stripplot(data=df_both,y=s_foci,x='color',s=s,dodge=True,ax=ax,palette=d_colorblind,jitter=0.2,alpha=alpha,order=hue_order) #
     #annotate
     if len(order) == 6:
         pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5])]
@@ -444,19 +533,20 @@ def plot_violins2(df_both,d_pval,d_order,s_stats,s_foci,order,d_colorblind,s_por
         pairs = [(order[0],order[1]),(order[2],order[3]),(order[4],order[5]),(order[6],order[7])]
         pvalues = [d_pval[list(d_order.keys())[0]],d_pval[list(d_order.keys())[1]],d_pval[list(d_order.keys())[2]],d_pval[list(d_order.keys())[3]]]
     reject, corrected, __, __ = statsmodels.stats.multitest.multipletests(pvalues,method='fdr_bh')
-    formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(pvalues)]
+    formatted_pvalues = [f'P={pvalue:.2}' for pvalue in list(pvalues)]
     if b_correct:
-        formatted_pvalues = [f'p={pvalue:.2}' for pvalue in list(corrected)]
+        formatted_pvalues = [f'P={pvalue:.2}' for pvalue in list(corrected)]
     annotator = Annotator(ax, pairs=pairs, data=df_both,y=s_foci,x='color',verbose=False)
     annotator.set_custom_annotations(formatted_pvalues)
     annotator.annotate()
     #ax.legend().remove()
     df_label = df_both.dropna().groupby('x').count().hue.loc[d_order.keys()]
     s_replace = s_porg.split('_')[0]
-    ls_labs = [f'{item.replace("quartiles",f"{s_replace} quartiles")} n={df_label[item]}' for item in df_label.index]
+    ls_labs = [f'{item.replace("quartiles",f"{s_replace} quartiles")} N={df_label[item]}' for item in df_label.index]
     ax.set_xlabel(" | ".join(ls_labs),fontsize=8)
     ax.set_ylabel(ax.get_ylabel(),fontsize=8)
-    ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", fontsize='large',loc='right',pad=10) #
+    if b_title:
+        ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", fontsize='large',loc='right',pad=10) #
     plt.tight_layout()
     return(fig,pvalues,corrected)
 
@@ -475,7 +565,7 @@ def plot_violins3(df_both,s_stats,s_foci,s_comp,s_porg,hue_order,hue='TCR_Met_Si
                  palette='tab20') #
     ax.legend(bbox_to_anchor=(1,1),fontsize='small')
     ax.set_xticklabels(ax.get_xticklabels(),rotation=45,fontsize=8)
-    ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", loc='left',fontsize='large',pad=10) #
+    #ax.set_title(f"{s_foci.replace('_',' ')} ({s_porg.split('_')[-1][0:3]})", loc='left',fontsize='large',pad=10) #
     plt.tight_layout()
     return(fig, ax)
 
@@ -505,7 +595,7 @@ def violin_stats(df_pri,d_order,s_foci,s_stats):
         d_pval.update({s_cat:pvalue})
     return(df_both,d_pval,order,ls_ticks)
     
-def plot_violins(df_both,d_pval,d_order,s_stats,s_foci,order,ls_ticks,b_correct=False):
+def plot_violins_OLD(df_both,d_pval,d_order,s_stats,s_foci,order,ls_ticks,b_correct=False):
     figsize=(3,3)
     fig,ax=plt.subplots(dpi=300,figsize=figsize)
     if s_stats == 'non-parametric':
@@ -661,9 +751,9 @@ def quartile_km(df,s_col,s_title_str='',savedir='',alpha=0.05,i_cut=4,labels=['l
 ## find best cutpoint 
 def single_km(df_all,s_cell,s_subtype,s_plat,s_col,savedir,alpha=0.05,cutp=0.5,s_time='Survival_time',s_censor='Survival',s_propo='in'):
     df_all.index = df_all.index.astype('str')
-    try:
+    if s_subtype != '':
         df = df_all[(df_all.subtype==s_subtype)].copy() #(df_all.Platform==s_plat) &
-    except:
+    else:
         df = df_all.copy()
     df = df.loc[:,[s_col,s_time,s_censor]].dropna()
     if len(df) > 1:
@@ -740,14 +830,13 @@ warnings.filterwarnings("default",category = exceptions.ApproximationWarning)
 #     ax.set_ylim(-0.05,1.05)
 #     return(fig,ls_order)
 
-def patient_heatmap(df_p,ls_col,ls_annot,figsize=(7,6),linkage='complete',
+def patient_heatmap(df_p,ls_col,ls_annot,figsize=(7,6),method="complete",metric="euclidean", standard_scale=0,
                     ls_color=[mpl.cm.tab10.colors,mpl.cm.Set1.colors,mpl.cm.Set2.colors,mpl.cm.Set3.colors,mpl.cm.Paired.colors,mpl.cm.Pastel1.colors],
-                    z_score=0):
+                    ):
     #more plots
     #color by platform/leiden
     from matplotlib.pyplot import gcf
-    
-    #
+
     df_annot = pd.DataFrame()
     dd_color = {}
     for idx, s_annot in enumerate(ls_annot):
@@ -756,21 +845,22 @@ def patient_heatmap(df_p,ls_col,ls_annot,figsize=(7,6),linkage='complete',
         network_colors = df_p.loc[:,s_annot].map(d_color) 
         df_annot[s_annot] = pd.DataFrame(network_colors)
         dd_color.update({s_annot:d_color})
-    try:
-        g = sns.clustermap(df_p.loc[:,ls_col],figsize=figsize,cmap='viridis',z_score=z_score,
-            row_colors=df_annot,method=linkage,dendrogram_ratio=0.16,xticklabels=1,yticklabels=1,
-            cbar_kws= {'orientation':'vertical','anchor':(1,0),
-                       'aspect':10,'fraction':.05,'shrink':3
-                      })
-        for idx, (s_annot, d_color) in enumerate(dd_color.items()):
-            g.ax_col_dendrogram.bar(0, 0, color='w',label=' ', linewidth=0)
-            for label,color in d_color.items():
-                g.ax_col_dendrogram.bar(0, 0, color=color,label=label, linewidth=0)
-        
-        l1 = g.ax_col_dendrogram.legend(loc="right", ncol=1,bbox_to_anchor=(0, 0.7),bbox_transform=gcf().transFigure)
-    except:
-        print('clustermap error')
-        g= df_p.loc[:,ls_col].dropna(how='any')
+    #try:
+    g = sns.clustermap(df_p.loc[:,ls_col],figsize=figsize,cmap='viridis',method=method,metric=metric,standard_scale=standard_scale,#z_score=z_score,
+        row_colors=df_annot,dendrogram_ratio=0.16,xticklabels=1,yticklabels=1,
+        cbar_pos= (-.05, .8, 0.05, 0.1),
+        cbar_kws= {'orientation':'vertical','label':'z-score'}#'fraction':0.01, 'pad':0.04,'anchor':(-.01,-.01),
+                   #'aspect':20,'fraction':.03,'shrink':0.5}
+                   )
+    for idx, (s_annot, d_color) in enumerate(dd_color.items()):
+        g.ax_col_dendrogram.bar(0, 0, color='w',label=' ', linewidth=0)
+        for label,color in d_color.items():
+            g.ax_col_dendrogram.bar(0, 0, color=color,label=label, linewidth=0)
+    
+    l1 = g.ax_col_dendrogram.legend(loc="right", ncol=1,bbox_to_anchor=(0, 0.6),bbox_transform=gcf().transFigure)
+    # except:
+    #     print('clustermap error')
+    #     g= df_p.loc[:,ls_col].dropna(how='any')
     return(g,df_annot)
     #g.savefig(f'{savedir}/clustermap_PlatformandSubtype_{s_sample}_{s_type}_{s_partition}_{s_cell}_{s_type}_{n_neighbors}_{resolution}.png',dpi=200)
 
@@ -804,6 +894,24 @@ def plt_sig(df_test,ax,ax_factor=5):
         ax.annotate('', xy=(x_one,y_lim - (y_diff+count)/ax_factor), xytext=(x_two,y_lim - (y_diff+count)/ax_factor), arrowprops=props)
         #break
     return(ax)
+
+def plot_chi(df_all,s_clin,s_x_var,figsize=(4,4),alpha=0.05,annot=None):
+    df_patient = df_all.loc[:,[s_clin,s_x_var]].dropna()
+    crosstab = pd.crosstab(df_patient.loc[:,s_clin],df_patient.loc[:,s_x_var])
+    df = crosstab.T.unstack().reset_index().rename({0:'Total Pts'},axis=1)
+    statistic,pvalue, dof, expected_freq = stats.chi2_contingency(crosstab)
+    if pvalue < alpha:
+        fig, ax = plt.subplots(figsize=figsize,dpi=300)
+        if not annot is None:
+            sns.heatmap(crosstab/crosstab.sum(),ax=ax,annot=annot,cbar_kws={'label':f'Percent Pts. in {s_x_var}'},fmt='')
+        else:
+            sns.heatmap(crosstab/crosstab.sum(),ax=ax,annot=True,cbar_kws={'label':f'Percent Pts. in {s_x_var}'})
+        ax.set_title(f'{s_clin} vs. {s_x_var}\np={pvalue:.3} n={len(df_patient)}')
+    else:
+        fig = None
+        ax = None
+    return(fig,ax,crosstab)
+    
 def post_hoc(confusion_matrix):
     chi2, pvalue, dof, expected  = stats.chi2_contingency(confusion_matrix)
     observed_vals = confusion_matrix
@@ -1346,7 +1454,7 @@ def single_km_cat(df_all,s_col,savedir,alpha=0.05,s_time='Survival_time',s_censo
         if results.summary.p[0] < alpha:
             kmf = KaplanMeierFitter()
             fig, ax = plt.subplots(figsize=(3,3),dpi=300)
-            for s_group in df.loc[:,s_col].unique():
+            for s_group in sorted(df.loc[:,s_col].unique()):
                 df_abun = df[df.loc[:,s_col]==s_group]
                 durations = df_abun.loc[:,s_time]
                 event_observed = df_abun.loc[:,s_censor]
@@ -1360,8 +1468,14 @@ def single_km_cat(df_all,s_col,savedir,alpha=0.05,s_time='Survival_time',s_censo
             ax.set_xlabel(s_time)
             ax.legend(loc='upper right')
             plt.tight_layout()
-            fig.savefig(f"{savedir}/Survival_Plots/KM_{s_title1.replace(' ','_')}_{s_censor}.png",dpi=300)
-        return(df)
+            #fig.savefig(f"{savedir}/Survival_Plots/KM_{s_title1.replace(' ','_')}_{s_censor}.png",dpi=300)
+        else:
+            fig = None
+            ax = None
+    else:
+        fig = None
+        ax = None
+    return(fig, ax)
 
 def add_patient_results(df_file, s_file,s_sample):
     if s_file.find(f'results_{s_sample}_GatedCellTypes') > -1:
@@ -1633,7 +1747,7 @@ def lighten_color(color, amount=0.5):
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])          
 
-def categorical_correlation_boxplot(df_all,s_group,s_marker,s_type,s_cell,alpha=0.05,s_propo='in',b_ttest=False):
+def categorical_correlation_boxplot(df_all,s_group,s_marker,s_type,s_cell,alpha=0.05,s_propo='in',b_ttest=False,figsize=(3,3)):
         df_group = df_all.loc[:,[s_group,s_marker]]
         df_group = df_group.dropna()
         df_group = df_group.loc[~df_group.index.duplicated(),~df_group.columns.duplicated()]
@@ -1668,18 +1782,18 @@ def categorical_correlation_boxplot(df_all,s_group,s_marker,s_type,s_cell,alpha=
             df_test, ls_order = df_from_mcomp(m_comp)
             if pd.Series(['Templates_binary','Rearrangements_binary','TE_Clones_binary','Recurrence']).isin([s_group]).any(): 
                 ls_order = np.flip(ls_order) 
-            if df_group.loc[:,s_group].nunique() > 2:
-                figsize=(6,3)
-            else:
-                figsize=(3,3)
+            # if df_group.loc[:,s_group].nunique() > 2:
+            #     figsize=(6,3)
+            # else:
+            #     figsize=(3,3)
             fig, ax = plt.subplots(figsize=figsize,dpi=300)
             sns.boxplot(data=df_group,x=s_group,y=s_marker,showfliers=False,ax=ax,order=[(item) for item in ls_order],palette=[lighten_color(color,0.7) for color in sns.color_palette()])
             sns.stripplot(data=df_group,x=s_group,y=s_marker,ax=ax,order=[(item) for item in ls_order],alpha=1,linewidth=1)#,palette='dark'
             if df_group.loc[:,s_group].nunique() > 2:
                 plt_sig3(df_test,ls_order,ax)
-                ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.4f}')
+                ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.2f}')
             else:
-                ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.4f} (n={n_low}, {n_high})')
+                ax.set_title(f'{s_group} versus\n {s_marker} {s_propo} {s_cell}\n p={pvalue:.2f} (n={n_low}, {n_high})')
             #ax.set_ylim(ax.get_ylim()[0],ax.get_ylim()[1])
             ax.set_ylabel(f'{s_marker} {s_type}')
             plt.tight_layout()
@@ -1705,10 +1819,13 @@ def add_old_pt_ID(df_all,df_surv,ls_group,ls_Annot,s_primary_met='PDAC'):
         df_all[s_hue] = df_all.Old_Pt_ID.map(dict(zip(df_all.Old_Pt_ID,df_all.Tissue))).map(d_mets)
     return(df_all)
 
-def plot_youden_tcr(df_patient,s_tcr,pos_label):
+def plot_youden_tcr(df_patient,s_tcr,pos_label,figsize=(5,6)):
     d_result = {}
     ls_col_thresh = df_patient.columns[(df_patient.columns.str.contains('_day_survival')) & (df_patient.columns.str.contains(s_tcr))]
-    fig,ax = plt.subplots(3,2,dpi=200,figsize=(5,6),sharex=True,sharey=True)
+    if len(ls_col_thresh)<3:
+        fig,ax = plt.subplots(2,1,dpi=200,figsize=figsize,sharey=True)
+    else:
+        fig,ax = plt.subplots(3,2,dpi=200,figsize=figsize,sharex=True,sharey=True)
     ax=ax.ravel()
     for ax_idx, s_col in enumerate(ls_col_thresh):
         #print(s_col)
@@ -1731,7 +1848,8 @@ def plot_youden_tcr(df_patient,s_tcr,pos_label):
         ax[ax_idx].set_title(s_col.replace(f'{s_tcr}_',''),fontsize='medium')
         ax[ax_idx].set_xlabel('')
         ax[ax_idx].set_ylabel('')#ax[ax_idx].get_ylabel(),fontsize='small'#
-    ax[5].axis('off')
+    if len(ls_col_thresh) % 2:
+        ax[-1].axis('off')
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axis
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
@@ -1941,7 +2059,7 @@ def add_fdrq_legend_ax2(texts,hatch,ax2,anchor=(1.01,0.6)):
             #Num_censored = (df_patient2.loc[:,s_time] <= SurvivalThreshold) & (df_patient2.loc[:,s_tcr].notna()) & (df_patient2.loc[:,s_censor] == 0) & (df_patient2.Alive_30_days_post_surgery)
             #df_counts.loc[f'{s_tcr}_{SurvivalThreshold}'] = [GoodIdx.sum(),BadIdx.sum(),Num_censored.sum()]
         
-def youden_high_good(df_patient,b_primary,s_time,s_censor,s_tcr):
+def youden_high_good(df_patient,b_primary,s_time,s_censor,s_tcr,figsize=(4,4)):
     ls_foci = pd.Series(['Shannon_Entropy_Tumor','Templates_per_ng', 
                'Productive_Rearrangements','Simpsons_Diversity_Tumor',#'Fraction Shared Clones 10',
                'Clonality_Tumor', 'Clonality_Blood','Productive_Rearrangements_Blood',
@@ -1953,7 +2071,7 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor,s_tcr):
            'Hill_1_blood','d50_Clones', 'd50_Clones_blood',
            'chao_Estimator','true_Value','Fraction Shared Clones 0to2',
       'Fraction Shared Clones 2to5','Fraction Shared Clones 5to10','Fraction Shared Clones >=10',
-     'Fraction Tumor Distinct Clones 0to2','jaccard_Tumor','public_Tumor',#'morisita_Tumor',
+     'Fraction Tumor Distinct Clones 0to2','jaccard_Tumor','public_Tumor','jaccard_Tumor_blood','public_Tumor_blood',#'morisita_Tumor',
      'Fraction Tumor Distinct Clones 2to5','Fraction Tumor Distinct Clones 5to10',
      'Fraction Tumor Distinct Clones >=10','jaccard_Met','jaccard_Primary',
               'jaccard_Blood','public_Blood','public_Met','public_Primary',])
@@ -1982,11 +2100,11 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor,s_tcr):
                 continue
             df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,[s_tcr,s_time,s_censor]].dropna()
             df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'High',False:'Low'})
-            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
+            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor,figsize=figsize)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
 #low = good
-def youden_low_good(df_patient,b_primary,s_time,s_censor,s_tcr):
+def youden_low_good(df_patient,b_primary,s_time,s_censor,s_tcr,b_include=False,figsize=(4,4)):
     ls_foci = pd.Series(['Shannon_Entropy_Blood','Simpsons_Diversity_Blood',
                          'Fraction Shared Clones 10',
            # 'Fraction Shared Clones 5','Fraction Shared Clones 2',   
@@ -2014,6 +2132,10 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor,s_tcr):
             fig.savefig(f'figures/youden_{s_tcr}_{pos_label}_{b_primary}.png')
             plt.close(fig)
             dd_result.update(d_result)
+    elif b_include:
+        fig, d_result = plot_youden_tcr(df_patient,s_tcr,pos_label)
+        plt.close(fig)
+        dd_result.update(d_result)
     else:
         return(d_fig)
     sns.set_palette(pal_porg_r)
@@ -2027,7 +2149,7 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor,s_tcr):
                 continue
             df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,['Public_Patient_ID',s_tcr,s_time,s_censor]].dropna()
             df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'High',False:'Low'})
-            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor)
+            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor,figsize=figsize)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
 
@@ -2222,6 +2344,32 @@ def tau_conf(x,y,x_err=None,y_err=None,censors=None,p_conf=0.6826,n_samp=int(1e4
         quants = np.quantile(tau_mc,[0.5-0.5*p_conf,0.5,0.5+0.5*p_conf])
         tau_lower,tau_upper = np.diff(quants)
     return tau_lower,tau_upper
+
+def patient_kendall(df_patient,sx,sy,s_censors):
+    x = df_patient.loc[:,sx]
+    y = df_patient.loc[:,sy]
+    # gen random "upper limits"
+    censors = np.ones((2,len(x)))
+    uplims = df_patient.loc[:,s_censors]==0#np.unique(np.random.randint(0,high=len(x)-1,size=60))
+    censors[1,uplims]=0
+    #uncens = [i for i in range(len(x)) if i not in uplims]
+    # faux uncertainties, accounting for upper limits
+    x_err = 0.1*np.random.rand(len(x))*censors[0]
+    y_err = 0.1*np.random.rand(len(y))*censors[1]
+    # Kendall tau
+    tau,p = kendall(x,y,censors=censors)
+    #tau_lo,tau_up = util.tau_conf(x,y,censors,method='bootstrap')
+    print(f'censored Kendall tau: {tau:.3f}, p: {p:.3}')#-{tau_lo:.3f}+{tau_up:.3f}
+    return(tau,p)
+
+def patient_pearson(df_patient,sx,sy):
+    df = df_patient.loc[:,[sx,sy]].dropna()
+    x = df.loc[:,sx]
+    y = df.loc[:,sy]
+    # gen random "upper limits"
+    statistic,p=stats.pearsonr(x, y)
+    print(f'pearson r: {statistic:.3f}, p: {p:.3}')#-{tau_lo:.3f}+{tau_up:.3f}
+    return(statistic,p)
 # # organotropism and pORG (side by side axis)
 # sorter_combined =  ['HALLMARK_MYOGENESIS' ,'HALLMARK_CHOLESTEROL_HOMEOSTASIS',
 #   'HALLMARK_ANDROGEN_RESPONSE','HALLMARK_OXIDATIVE_PHOSPHORYLATION',
