@@ -295,7 +295,7 @@ def correlation_regplot(df_merge,s_tum,s_marker,alpha=0.05,b_legend=False):
         ax=None
     return(fig,ax)
 
-def km_plot(df,s_col,s_time,s_censor,loc='upper center',fontsize='medium',figsize=(4,4),b_pval=True):
+def km_plot(df,s_col,s_time,s_censor,loc='upper center',fontsize='small',figsize=(3,3),b_pval=True):
     df = df.loc[:,[s_col,s_time,s_censor]].dropna().copy()
     results = multivariate_logrank_test(event_durations=df.loc[:,s_time],
                                     groups=df.loc[:,s_col], event_observed=df.loc[:,s_censor])        
@@ -312,7 +312,7 @@ def km_plot(df,s_col,s_time,s_censor,loc='upper center',fontsize='medium',figsiz
         print(f'{s_col} {s_group} Median = {kmf.median_survival_time_}')
     if b_pval:#len(ls_order)==2:
         pvalue = f"{results.summary.p[0]:.2}"
-        demo_con_style(ax,0.70,0.93,0.78,0.9, f"P={pvalue}")
+        demo_con_style(ax,0.74,0.9,0.73,0.83, f"P={pvalue}")
         ax.set_title(f'{s_col.replace("_"," ")}')
     else:
         ax.set_title(f'{s_col.replace("_"," ")}\nP={results.summary.p[0]:.2}')
@@ -2100,7 +2100,7 @@ def youden_high_good(df_patient,b_primary,s_time,s_censor,s_tcr,figsize=(4,4)):
                 continue
             df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,[s_tcr,s_time,s_censor]].dropna()
             df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'High',False:'Low'})
-            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor,figsize=figsize)
+            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor,fontsize='small',figsize=figsize)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
 #low = good
@@ -2149,7 +2149,7 @@ def youden_low_good(df_patient,b_primary,s_time,s_censor,s_tcr,b_include=False,f
                 continue
             df_km = df_patient.loc[df_patient.Alive_30_days_post_surgery,['Public_Patient_ID',s_tcr,s_time,s_censor]].dropna()
             df_km[key] = (df_km.loc[:,s_tcr] > thresh).replace({True:'High',False:'Low'})
-            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor,figsize=figsize)
+            fig,ax,ls_order = km_plot(df_km,key,s_time,s_censor,fontsize='small',figsize=figsize)
             d_fig.update({f'{b_primary}_{key}':fig})
     return(d_fig)
 
