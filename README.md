@@ -61,6 +61,10 @@ Finally, clone my repo for processing, visualization and analysis of multiplex i
 
 R version 4.1.2 was used with R packages DESeq2, GSVA, msigdbr, gplots, and ggplot.  GSEA was run in JAVA using the command line interface.
 
+R version 3.6.3 was used with the edgeR package (v 3.26.8)
+
+Additional R packages used:
+
 - immunarch (v0.9.0)
 - ClusterProfiler (v4.6.2)
 - immunedeconv (v2.1.0)
