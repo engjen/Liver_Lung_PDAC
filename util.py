@@ -117,13 +117,13 @@ def labels_with_n(plotting,ls_groups,ax):
                f'{ls_groups[1]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[1]])})',
                   f'{ls_groups[2]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[2]])})']
     elif len(ls_groups)==4:
-        xlabels = [f'{ls_groups[0]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[0]])})',
-               f'{ls_groups[1]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[1]])})',
-                  f'{ls_groups[2]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[2]])})',
-               f'{ls_groups[3]}{linebreak}(N={(df_mean.loc[:,s_group].value_counts()[ls_groups[3]])})']
+        xlabels = [f'{ls_groups[0]}{linebreak}N={(df_mean.loc[:,s_group].value_counts()[ls_groups[0]])}',
+               f'{ls_groups[1]}{linebreak}N={(df_mean.loc[:,s_group].value_counts()[ls_groups[1]])}',
+                  f'{ls_groups[2]}{linebreak}N={(df_mean.loc[:,s_group].value_counts()[ls_groups[2]])}',
+               f'{ls_groups[3]}{linebreak}N={(df_mean.loc[:,s_group].value_counts()[ls_groups[3]])}']
     else:
         return(ax)
-    ax.set_xticklabels(xlabels)
+    ax.set_xticklabels(xlabels,fontsize='small')
     ax.set_xlabel(ax.get_xlabel().replace("_"," "))
     ax.set_ylabel(ax.get_ylabel().replace("_"," "))
     return(ax)
@@ -238,6 +238,19 @@ def annotated_stripplot3(plotting,ls_groups,label,hue):
     annot.configure(test='t-test_ind',comparisons_correction="fdr_bh",text_format='star', verbose=False)
     ax, test_results = annot.apply_test().annotate()
     return(fig,ax,test_results)
+
+#excel func
+def open_write_excel(d_result_fig,filename='Source_Data_Figure3.xlsx'):
+    if not os.path.exists(filename):
+        with pd.ExcelWriter(filename,mode='w',engine="openpyxl") as writer:
+            for sheet_name, df in d_result_fig.items():
+                print(f'saving {sheet_name[0:30]}')
+                df.to_excel(writer, sheet_name=sheet_name[0:30])
+    else:
+        with pd.ExcelWriter(filename,mode='a',if_sheet_exists='replace',engine="openpyxl") as writer:
+            for sheet_name, df in d_result_fig.items():
+                print(f'saving {sheet_name[0:30]}')
+                df.to_excel(writer, sheet_name=sheet_name[0:30])
     
 def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
 
@@ -395,7 +408,7 @@ def cph_plot(df,s_multi,s_time,s_censor,figsize=(3,3)):
     cph.plot(ax=ax)
     pvalue = cph.summary.p[s_multi]
     hr = cph.summary.loc[:,'exp(coef)'][s_multi]
-    ax.set_title(f'{s_multi}\nHR={hr:.2},P={pvalue:.2} N={(len(df.dropna()))}')
+    ax.set_title(f'{s_multi}\nHR={hr:.3},P={pvalue:.2} N={(len(df.dropna()))}')
     plt.tight_layout()
     return(fig,cph)
         
@@ -789,9 +802,9 @@ def single_km(df_all,s_cell,s_subtype,s_plat,s_col,savedir,alpha=0.05,cutp=0.5,s
             s_pval = f'{results.summary.p[0]:.2}'
             ax.set_title(f'{s_title1}\n{s_title2} {s_subtype}\np={s_pval} n={len(df)} [{len(df.loc[~b_low,:])}, {len(df.loc[b_low,:])}]',fontsize=10)
             ax.set_xlabel(s_time)
-            ax.legend(loc='upper right')#,title=f'{len(df.loc[~b_low,:])}, {len(df.loc[b_low,:])}'
+            ax.legend(loc='upper right',title=f'<={i_cut:.2}')#,title=f'{len(df.loc[~b_low,:])}, {len(df.loc[b_low,:])}'
             plt.tight_layout()
-            fig.savefig(f"{savedir}/Survival_Plots/KM_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}_{s_subtype}_{cutp}_{s_censor}_{s_pval}.png",dpi=300)
+            fig.savefig(f"{savedir}/Survival_Plots/KM_{s_title1.replace(' ','_')}_{s_title2.replace(' ','_')}_{s_subtype}_{cutp}_{s_censor}_{s_pval}.pdf",dpi=300)
             #plt.close(fig)
     else:
         print(f'{s_col}: too many nas')
@@ -1555,7 +1568,11 @@ def load_patient_results(df_file, df_surv, s_index,  s_time, s_censor):
     return(ls_marker, df_all, s_type, s_cell)
 
 def correlation_heatmap(df_all, s_title, dim = (8,7)):
-    g = sns.clustermap(df_all.corr().fillna(0),yticklabels=1,figsize=dim)
+    #just the dendrogram
+    mask = (np.ones_like(df_all.corr().fillna(0))) 
+    g = sns.clustermap(df_all.corr().fillna(0),yticklabels=1,figsize=dim,
+                      cbar=False,dendrogram_ratio=0.1,cbar_pos=None,tree_kws={'linewidths':3},
+                   mask=mask)
     plt.close()
     categories_order = df_all.corr().iloc[g.dendrogram_col.reordered_ind,:].index.tolist()
     df_all = df_all.loc[:,categories_order]
