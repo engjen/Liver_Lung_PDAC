@@ -38,43 +38,6 @@ GetCollapseIndex = function(X, Symbols)
 
 #= LoadDnaPanelData() ============================================================
 
-#FileName = paste(SourcePath, "Public/OriginalData/", "Supplemental_Dataset_3.xlsx", sep="")
-#require(XLConnect)
-#  
-#wb <- loadWorkbook(FileName)
-#
-#RnaSeqTPM = readWorksheet(wb, 
-#                          sheet = "Kallisto_TPM", 
-#                          startCol = which(LETTERS=="A"), 
-#                          startRow = 1, # Include header if you want column names.
-#                          endCol = 0, #which(LETTERS=="A") * 26 + which(LETTERS=="S"),
-#                          endRow = 0)
-#dim(RnaSeqTPM)
-#
-#RnaSeqCounts = readWorksheet(wb, 
-#                             sheet = "Kallisto_Counts", 
-#                             startCol = which(LETTERS=="A"), 
-#                             startRow = 1, # Include header if you want column names.
-#                             endCol = 0, #which(LETTERS=="A") * 26 + which(LETTERS=="S"),
-#                             endRow = 0)
-#dim(RnaSeqCounts)
-#
-#edgeR_TMM = readWorksheet(wb, 
-#                          sheet = "edgeR_TMM", 
-#                          startCol = which(LETTERS=="A"), 
-#                          startRow = 1, # Include header if you want column names.
-#                          endCol = 0, #which(LETTERS=="A") * 26 + which(LETTERS=="S"),
-#                          endRow = 0)
-#dim(edgeR_TMM)
-#
-#edgeR_TMM_Filtered = readWorksheet(wb, 
-#                                   sheet = "edgeR_TMM_Filtered", 
-#                                   startCol = which(LETTERS=="A"), 
-#                                   startRow = 1, # Include header if you want column names.
-#                                   endCol = 0, #which(LETTERS=="A") * 26 + which(LETTERS=="S"),
-#                                   endRow = 0)
-#dim(edgeR_TMM_Filtered)
-
 LoadDnaPanelData = function(SourcePath)
 {
   HR_DDR_Genes = c("ARID1A", "ATM", "ATRX", "BAP1", "BARD1", "BLM", "BRCA1", 
@@ -83,9 +46,6 @@ LoadDnaPanelData = function(SourcePath)
                    "RAD50", "RAD51", "RAD51B", "WRN")
   
   # DNA_Specimen_Metadata:
-  
-  #DNA_Specimen_Metadata = read.table(paste(SourcePath, "OriginalData/DNA_Specimen_Metadata.tsv", sep=""),  
-  #                                   sep="\t", quote="", comment.char = "", header=TRUE, stringsAsFactors=FALSE) 
   
   FileName = paste(SourcePath, "Supplemental_Data/", "Supplemental_Dataset_1.xlsx", sep="")
   require(XLConnect)
@@ -110,12 +70,11 @@ LoadDnaPanelData = function(SourcePath)
                                                   "Days_from_Resection_to_FU", 
                                                   "Days_from_Earliest_Recur_to_FU", 
                                                   "Vital_Status_at_FU", 
-                                                  "Neoadjuvant_Treatment", 
                                                   "Percent_Tumor_Pathologist_Estimate", 
                                                   "Percent_Tumor_from_DNA", 
                                                   "Tumor_Mutation_Burden", 
                                                   "Microsatellite_Instability", 
-                                                  "NormalSampleSource"))
+                                                  "Normal_Sample_Source"))
   DNA_Specimen_Metadata = DNA_Specimen_Metadata[, idx]
   
   # TempusReportedVariants:
@@ -124,18 +83,14 @@ LoadDnaPanelData = function(SourcePath)
   wb <- loadWorkbook(FileName)
   
   TempusReportedVariants = readWorksheet(wb, 
-                                        sheet = "Reported_Mutations", 
-                                        startCol = which(LETTERS=="A"), 
-                                        startRow = 1, # Include header if you want column names.
-                                        endCol = 0, #which(LETTERS=="A") * 26 + which(LETTERS=="S"),
-                                        endRow = 0)
+                                         sheet = "Reported_Alterations", 
+                                         startCol = which(LETTERS=="A"), 
+                                         startRow = 1, # Include header if you want column names.
+                                         endCol = 0, #which(LETTERS=="A") * 26 + which(LETTERS=="S"),
+                                         endRow = 0)
   dim(TempusReportedVariants)
   names(TempusReportedVariants)
   
-  #TempusReportedVariants = read.table(paste(SourcePath, "OriginalData/TempusReportedVariants.tsv", sep=""),  
-  #                                    sep="\t", quote="", comment.char = "", header=TRUE, 
-  #                                    stringsAsFactors=FALSE)    
-
   return(list(Metadata = DNA_Specimen_Metadata,
               Variants = TempusReportedVariants,
               HR_DDR_Genes = HR_DDR_Genes))
@@ -151,63 +106,15 @@ LoadRnaSeqData = function(SourcePath, AnalysisOutputPath)
     load(file=paste(AnalysisOutputPath,"BCC_RNA_Data.RData", sep=""))
   } else
   {
-    RnaSeqTPM = read.table(paste(SourcePath, "data/RnaSeqTPM.tsv", sep=""),  
-                 sep="\t", quote="", comment.char = "", header=TRUE, 
-                 row.names=1, check.names=FALSE, stringsAsFactors=FALSE)    
-    RnaSeqCounts = read.table(paste(SourcePath, "data/RnaSeqCounts.tsv", sep=""),  
-                 sep="\t", quote="", comment.char = "", header=TRUE, 
-                 row.names=1, check.names=FALSE, stringsAsFactors=FALSE)    
-    edgeR_TMM = read.table(paste(SourcePath, "data/RnaSeqDGE_All_cpms.tsv", sep=""),  
-                 sep="\t", quote="", comment.char = "", header=TRUE, 
-                 row.names=1, check.names=FALSE, stringsAsFactors=FALSE)    
-    edgeR_TMM_Filtered = read.table(paste(SourcePath, "data/RnaSeqDGE_Filtered_cpms.tsv", sep=""),  
-                 sep="\t", quote="", comment.char = "", header=TRUE, 
-                 row.names=1, check.names=FALSE, stringsAsFactors=FALSE)    
-    
-    Result = CacheEnsemblAnnotion(RnaSeqData = RnaSeqTPM, 
-                                  SourcePath = AnalysisOutputPath,
-                                  Version = 111)
-                                  #Version = "Original")
-    EnsemblAnn = Result$EnsemblAnn
-    ExtraAnn = Result$ExtraAnn
-    rm(Result)
-    
-    # Remove ".version" numbers from Ensembl IDs if they are there.
-    # It's assumed that RnaSeqTPM & RnaSeqCounts have same rows, same number and order.
-    RnaSeqTPM = as.matrix(RnaSeqTPM)
-    RnaSeqCounts = as.matrix(RnaSeqCounts)
-    edgeR_TMM = as.matrix(edgeR_TMM)
-    edgeR_TMM_Filtered = as.matrix(edgeR_TMM_Filtered)
-    Target_Ensembl_ID = rownames(RnaSeqTPM)
-    temp = unlist(strsplit(Target_Ensembl_ID, split=".", fixed=TRUE))
-    if (length(temp) == 2*length(Target_Ensembl_ID))
-    {
-      idx = 2 * 1:length(Target_Ensembl_ID) - 1
-      Target_Ensembl_ID = temp[idx]
-    }
-    rownames(RnaSeqTPM) = Target_Ensembl_ID
-    rownames(RnaSeqCounts) = Target_Ensembl_ID
-  
-    # Match ensembl IDs from the kallisto output with the ensembl IDs
-    # from MioMart annotation.
-    Target_Ensembl_ID = rownames(RnaSeqTPM)
-    idx = match(x=Target_Ensembl_ID, table=EnsemblAnn[, "ensembl_gene_id"])
-    EnsemblAnn = EnsemblAnn[idx, ]
-    dim(EnsemblAnn)
-    
-    ExtraAnn = ExtraAnn[!duplicated(ExtraAnn$ENSEMBL), ]
-    dim(ExtraAnn)
-    
-    # I think these are already in order, but just to be sure...
-    idx = match(x=Target_Ensembl_ID, table=ExtraAnn[, "ENSEMBL"])
-    ExtraAnn = ExtraAnn[idx, ]
-    dim(ExtraAnn)
+    load(file=paste(SourcePath, "data/RnaSeqTPM.RData", sep=""))
+    load(file=paste(SourcePath, "data/RnaSeqCounts.RData", sep=""))
+    load(file=paste(SourcePath, "data/edgeR_TMM.RData", sep=""))
     
     # Create a matrix of RnaSeqTPM data where rows are unique gene symbols and
     # any redundant symbols are resolved by selecting the variant with the highest
-    # level of expression across the dataset.  Features without HUGO gene symbols
-    # are excluded. This helps with pathway tools based on HUGO symbols.
-    Symbols = ExtraAnn[, c("SYMBOL")]
+    # level of expression across the dataset.  Features without gene symbols
+    # are excluded. This helps with pathway tools based on gene symbols.
+    Symbols = RnaSeqTPM_Ann$SYMBOL
     Symbols[is.na(Symbols)] = "NA"
     CollapseIndex = GetCollapseIndex(X=RnaSeqTPM, Symbols = Symbols)
     idx = which(Symbols[CollapseIndex] == "NA")
@@ -215,21 +122,8 @@ LoadRnaSeqData = function(SourcePath, AnalysisOutputPath)
     length(CollapseIndex)
     RnaSeqCollapsedTPM = RnaSeqTPM[CollapseIndex, ]
     RnaSeqCollapsedCounts = RnaSeqCounts[CollapseIndex, ]
-    rownames(RnaSeqCollapsedTPM) = ExtraAnn[CollapseIndex, c("SYMBOL")]
-    rownames(RnaSeqCollapsedCounts) = ExtraAnn[CollapseIndex, c("SYMBOL")]
-    
-    write.table(cbind(gene = rownames(RnaSeqCollapsedTPM), RnaSeqCollapsedTPM), 
-                paste(AnalysisOutputPath, "RnaSeqCollapsedTPM.tsv", sep=""), 
-                sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-    
-    write.table(cbind(gene = rownames(RnaSeqCollapsedCounts), RnaSeqCollapsedCounts), 
-                paste(AnalysisOutputPath, "RnaSeqCollapsedCounts.tsv", sep=""), 
-                sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-    
-    # RNA_Specimen_Metadata:
-    
-    #RNA_Specimen_Metadata = read.table(paste(SourcePath, "OriginalData/RNA_Specimen_Metadata.tsv", sep=""),  
-    #             sep="\t", quote="", comment.char = "", header=TRUE, stringsAsFactors=FALSE)   
+    rownames(RnaSeqCollapsedTPM) = RnaSeqTPM_Ann$SYMBOL[CollapseIndex]
+    rownames(RnaSeqCollapsedCounts) = RnaSeqTPM_Ann$SYMBOL[CollapseIndex]
     
     FileName = paste(SourcePath, "Supplemental_Data/", "Supplemental_Dataset_1.xlsx", sep="")
     require(XLConnect)
@@ -247,6 +141,7 @@ LoadRnaSeqData = function(SourcePath, AnalysisOutputPath)
                                                     "Public_Specimen_ID", 
                                                     "Tumor_Type", 
                                                     "Specimen_Site", 
+                                                    "Percent_Tumor_Pathologist_Estimate",
                                                     "Percent_Tumor_from_DNA", 
                                                     "Liver_Met_Present", 
                                                     "Lung_Met_Present", 
@@ -254,8 +149,7 @@ LoadRnaSeqData = function(SourcePath, AnalysisOutputPath)
                                                     "Days_from_Resection_to_Recurrence", 
                                                     "Days_from_Resection_to_FU", 
                                                     "Days_from_Earliest_Recur_to_FU", 
-                                                    "Vital_Status_at_FU", 
-                                                    "Neoadjuvant_Treatment"))
+                                                    "Vital_Status_at_FU"))
     RNA_Specimen_Metadata = RNA_Specimen_Metadata[, idx]
     
     # Make sure metadata rows match matrix columns.
@@ -269,29 +163,27 @@ LoadRnaSeqData = function(SourcePath, AnalysisOutputPath)
       stop("RNA_Specimen_Metadata does not have the same number of specimens as RnaSeqTPM!")
     }
     RNA_Specimen_Metadata = RNA_Specimen_Metadata[idx, ]
-
+    
     save(RnaSeqTPM, 
+         RnaSeqTPM_Ann, 
          RnaSeqCounts, 
+         RnaSeqCounts_Ann, 
          RnaSeqCollapsedTPM, 
          RnaSeqCollapsedCounts, 
-         CollapseIndex,
          edgeR_TMM,
-         edgeR_TMM_Filtered,
-         EnsemblAnn,
-         ExtraAnn,
+         edgeR_TMM_Ann,
          RNA_Specimen_Metadata, 
          file=paste(AnalysisOutputPath,"BCC_RNA_Data.RData", sep=""))
   }
   
   return(list(TPM = RnaSeqTPM, 
+              TPM_Ann = RnaSeqTPM_Ann, 
               Counts = RnaSeqCounts, 
+              Counts = RnaSeqCounts_Ann, 
               CollapsedTPM = RnaSeqCollapsedTPM, 
               CollapsedCounts = RnaSeqCollapsedCounts, 
-              CollapseIndex = CollapseIndex,
               edgeR_TMM = edgeR_TMM,
-              edgeR_TMM_Filtered = edgeR_TMM_Filtered,
-              EnsemblAnn = EnsemblAnn,
-              ExtraAnn = ExtraAnn,
+              edgeR_TMM_Ann = edgeR_TMM_Ann,
               Metadata = RNA_Specimen_Metadata))
 }
 
@@ -303,8 +195,6 @@ CalculateBCCpORGpSUBandGSVAscores = function(AnalysisOutputPath, BCC_RNA_Data)
     load(file=paste(AnalysisOutputPath,"pORGpSUBandGSVA.RData", sep=""))
   } else
   {
-    # Theses results are consistent between different versions of R and packages
-    # tested.
     BCC_DESeq2Result = DoTwoFactorDESeq2(data = BCC_RNA_Data$CollapsedCounts, 
                                          Metadata = BCC_RNA_Data$Metadata, 
                                          FCThreshold = 1.0, # No FC filtering.
@@ -345,7 +235,6 @@ CalculateBCCpORGpSUBandGSVAscores = function(AnalysisOutputPath, BCC_RNA_Data)
                 sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
     
     #= Calculate GSVA scores. ======================================================
-    # Note that gsva() call has been updated.
     # Load HALLMARKS of cancer gene sets (50) and format for GSVA.
     HallmarkGeneSetsList = LoadGeneSets()
     
@@ -353,16 +242,17 @@ CalculateBCCpORGpSUBandGSVAscores = function(AnalysisOutputPath, BCC_RNA_Data)
                              pSUB_Up_51 = For_pSUB[[2]])
     pORGpSUB_GeneSetsList = MakeGeneList(pORGpSUB_GeneSets)
     
-    # Use DGE_cpms, may be more robust, but not gene length normalized?
-    M = log2(BCC_RNA_Data$edgeR_TMM_Filtered + 1)
-    Ensembl_ID = rownames(M)
-    idx = match(x=Ensembl_ID, table=BCC_RNA_Data$EnsemblAnn[, "ensembl_gene_id"])
-    M = M[!is.na(idx), ]
+    # Use DGE_cpms (edgeR TMM method), may be more robust, but not gene length normalized.
+    idx = which(BCC_RNA_Data$edgeR_TMM_Ann$TMM_Pass_Filter)
+    length(idx)
+    idx = idx[which(!is.na(BCC_RNA_Data$edgeR_TMM_Ann$hgnc_symbol)[idx])]
+    length(idx)
+    idx = idx[which(BCC_RNA_Data$edgeR_TMM_Ann$hgnc_symbol[idx] != "")]
+    length(idx)
+    M = log2(BCC_RNA_Data$edgeR_TMM[idx, ] + 1)
+    rownames(M) = BCC_RNA_Data$edgeR_TMM_Ann$hgnc_symbol[idx]
     dim(M)
-    rownames(M) = BCC_RNA_Data$EnsemblAnn[idx[!is.na(idx)], c("hgnc_symbol")]
-    M = M[rownames(M) != "", ]
-    dim(M)
-
+    
     PrimaryIdx = which(!is.na(BCC_RNA_Data$Metadata$Tumor_Type) &
                          BCC_RNA_Data$Metadata$Tumor_Type == "Primary")
     MetIdx = which(!is.na(BCC_RNA_Data$Metadata$Tumor_Type) &
@@ -443,7 +333,7 @@ DoTwoFactorDESeq2 = function(data, # List for tximport or matrix if not.
     LungCohort = which(!is.na(Metadata$Lung_Met_Present) & 
                          Metadata$Lung_Met_Present == 1 &
                          (is.na(Metadata$Liver_Met_Present) |
-                          Metadata$Liver_Met_Present == "NA"))
+                            Metadata$Liver_Met_Present == "NA"))
     
     PrimaryIdx = which(!is.na(Metadata$Tumor_Type) &
                          Metadata$Tumor_Type == "Primary")
@@ -713,11 +603,9 @@ GraphSetup <- function(width=6, height=6, pointsize=12,
 
 ApplyPurIST = function(ScriptsPath, Data)
 {
-  ### Calculate PurIST scores based on example that Hannah set up. ###
+  ### Calculate PurIST. ###
   
-  # Author: Hannah Holly
-  # Contact: holly@ohsu.edu
-  # Based on instructions provided by Naim Rashid
+  # Based on instructions provided to Hannah Holly (holly@ohsu.edu) by Naim Rashid
   # PurIST github repo: https://github.com/naimurashid/PurIST
   # PATENT PENDING; PAPER ACCEPTED TO AACR.
   # Do not distribute without citing yeh, rashid, and moffit's new paper.
@@ -815,9 +703,6 @@ ApplyGSVA = function(M, gs_collection, RowCV_ThreshFactor = 0.5)
                           absRanking = FALSE), 
                 verbose=TRUE)
   
-  #M_GSVA = gsva(M[RowCV >= RowCV_Thresh, ], gs_collection,
-  #              min.sz=3, max.sz=5000, verbose=TRUE)
-  
   return(t(M_GSVA))
 }
 
@@ -825,7 +710,7 @@ ApplyGSVA = function(M, gs_collection, RowCV_ThreshFactor = 0.5)
 Load_ICGC_Data = function(SourcePath)
 {
   # Load 96 ICGC PDAC samples.
-  ICGC_Data = read.table(paste(SourcePath, "PublicDataUsed/", "nature16965-s2-PDAC_normalised_exp.tsv", sep=""),  
+  ICGC_Data = read.table(paste(SourcePath, "PublicDataUsed/", "41586_2016_BFnature16965_MOESM271_ESM.txt", sep=""),  
                          sep="\t", quote="", comment.char = "", header=TRUE, row.names=1, stringsAsFactors=FALSE)
   dim(ICGC_Data)
   names(ICGC_Data)
@@ -851,7 +736,7 @@ Load_TCGA_Data = function(SourcePath)
   # Get TCGA PDAC data from cBioPortal download (paad_tcga_pan_can_atlas_2018).
   Data = 
     read.table(paste(SourcePath, "PublicDataUsed/", 
-                     "data_RNA_Seq_v2_expression_median.txt", 
+                     "data_mrna_seq_v2_rsem.txt", 
                      sep=""),
                sep="\t", quote="", comment.char = "", header=TRUE)
   
@@ -870,7 +755,7 @@ Load_TCGA_Data = function(SourcePath)
   head(colnames(TCGA_ListToUse))
   
   # There are duplicate gene symbols as expected, but there are also duplicate 
-  # Entrez IDs.  So I will collaplse Entrez IDs, then gene symbols.
+  # Entrez IDs.  So we will collapse Entrez IDs, then gene symbols.
   Symbols = as.character(Data$Entrez_Gene_Id)
   Symbols[is.na(Symbols)] = "NA"
   M = as.matrix(Data[, -c(1:2)])
@@ -921,25 +806,59 @@ Load_TCGA_Data = function(SourcePath)
 }
 
 #= tximport_Example() ==========================================================
-
+# This is not used, but is provided to show how TMM data was processed from
+# h5 files output by the kallisto pipeline.  To use this example, downlaod the
+# h5 files from GEO (see instruction at top of PublicAnalysis.R script).  Then
+# run this function, providing the path to the extracted H5 files.
+# NOTE that we originally processed this data using R version 3.6.3 and edgeR
+# package version 3.26.8. Our testing has shown that current versions of R and
+# edgeR give different results.
 tximport_Example = function(PathToH5Files)
 {
   # Load h5 files from kallisto pipeline to use for TMM normalization.
   library(tximport)
   library(rhdf5)
   library(edgeR)
+
+  # H5 files downloaded from our GEO submissioin are stored in one folder with
+  # each file named using the GEO sample ID and our sample ID. However, the
+  # tximport() function expects the files to be organized into folders named by
+  # sample ID, but with each h5 file named just "abundance.h5" in those folders. 
+  # This code reorganizes the h5 files to work with tximport().
   
-  # Import from h5 files which should be faster.
-  Samples = list.dirs(PathToH5Files, full.names = FALSE, recursive = FALSE)
+  # If needed, add "/" to end of path provided.
+  if (length(grep("/$", PathToH5Files)) != 1)
+  {
+    PathToH5Files = paste(PathToH5Files, "/", sep="")
+  }
+  
+  # Create a folder in which to reorganize the H5 files.
+  H5WorkingFolder = paste(PathToH5Files, "H5WorkingFolder/", sep="")
+  suppressWarnings(dir.create(H5WorkingFolder, recursive=FALSE))
+  
+  # Parse out the sample IDs from file name provided from GEO download and make 
+  # copies of H5 files named and organized for use with tximport().
+  H5Files = list.files(path = PathToH5Files, pattern = "_abundance.h5$")
+  for (H5File in H5Files)
+  {
+    Fields = strsplit(H5File, "_", fixed=TRUE)[[1]]
+    SampleID = Fields[2]
+    suppressWarnings(dir.create(paste(H5WorkingFolder, SampleID, sep=""), recursive=FALSE))
+    command = paste("mv ", PathToH5Files, H5File, " ", 
+                    H5WorkingFolder, SampleID, "/abundance.h5", sep="")
+    system(command)
+  }
+  
+  # Import from h5 files.
+  Samples = list.dirs(H5WorkingFolder, full.names = FALSE, recursive = FALSE)
   # The following is only used if ordering samples to match RnaSeqCounts.
   #idx = match(x=colnames(RnaSeqCounts), table=Samples)
   #Samples = Samples[idx]
-  h5Files = paste(PathToH5Files, Samples, "/abundance.h5", sep="")
+  h5Files = paste(H5WorkingFolder, Samples, "/abundance.h5", sep="")
   
   # Use cool tricks from Hannah's code to split by "|" and build data frame from
   # first two elements of each row which are the ensembl transcript ID and 
   # ensembl gene ID (many to 1 mapping that defines transcripts for each gene).
-  #h5ls(file=h5Files[1])
   X = h5read(file=h5Files[1], name="/aux/ids")
   X = data.frame(t(sapply(strsplit(as.character(X),'\\|'),'['))) 
   tx2geneMap = X[1:2]
@@ -992,8 +911,7 @@ tximport_Example = function(PathToH5Files)
   edgeR_TMM <- edgeR::cpm(RnaSeqDGEList, offset = RnaSeqDGEList$offset, log = FALSE)
   dim(edgeR_TMM)
   
-  # filtering using the design information
-  # Do not use a design here.
+  # Filter using a NULL design
   design = NULL
   keep <- filterByExpr(RnaSeqDGEList, design)
   length(which(keep))
@@ -1009,21 +927,27 @@ tximport_Example = function(PathToH5Files)
 
 #= Viper_ANOVA() ===============================================================
 
+# Supplemental Dataset 1
+library("readxl")
+
 Viper_ANOVA = function(BCC_RNA_Data)
 {
+  library("readxl")
+  
   # Use viper all primary matrix and test significant regulons between top/bottom
   # 1/4 by pORG_Up_55, pSUB_Up_51, and PurIST score.
   
-  ViperMetaData = BCC_RNA_Data$Metadata
+  ViperMetadata = BCC_RNA_Data$Metadata
   
-  ViperData = read.table(paste(SourcePath, "OriginalData/ViperData.tsv", sep=""),  
-                         sep="\t", quote="", comment.char = "", header=TRUE, 
-                         row.names=1, check.names=FALSE, stringsAsFactors=FALSE)    
+  ViperData <- readxl::read_xlsx(paste(SourcePath, "Supplemental_Data/", "Supplemental_Dataset_6.xlsx", sep=""), sheet = 1)
+  Regulons = ViperData$Regulon
+  ViperData = as.matrix(ViperData[, -1])
+  rownames(ViperData) = Regulons
   
-  idx = match(x=colnames(ViperData), table=ViperMetaData$Public_Specimen_ID)
+  idx = match(x=colnames(ViperData), table=ViperMetadata$Public_Specimen_ID)
   # Are there any samples missing from metadata?
   colnames(ViperData)[is.na(idx)]
-  ViperMetaData = ViperMetaData[idx, ]
+  ViperMetadata = ViperMetadata[idx, ]
   
   idx = match(x=colnames(ViperData), table=rownames(BCC_RNA_Data$GSVA_pORGpSUB_Primaries))
   # Are there any samples missing from this metadata?
@@ -1117,12 +1041,12 @@ Viper_ANOVA = function(BCC_RNA_Data)
                  TopBottomQuarter_pSUB_Up_51_qVal = AOV_qVal)
   
   ViperLiverCohort = which(!is.na(ViperMetadata$Liver_Met_Present) & 
-                           ViperMetadata$Liver_Met_Present == 1)
+                             ViperMetadata$Liver_Met_Present == 1)
   ViperLungCohort = which(!is.na(ViperMetadata$Lung_Met_Present) & 
-                          ViperMetadata$Lung_Met_Present == 1 &
-                          (is.na(ViperMetadata$Liver_Met_Present) |
-                           ViperMetadata$Liver_Met_Present == "NA"))
-
+                            ViperMetadata$Lung_Met_Present == 1 &
+                            (is.na(ViperMetadata$Liver_Met_Present) |
+                               ViperMetadata$Liver_Met_Present == "NA"))
+  
   MeanDiff = apply(ViperData[, ViperLiverCohort], MARGIN=1, FUN=mean) - 
     apply(ViperData[, ViperLungCohort], MARGIN=1, FUN=mean)
   
@@ -1164,7 +1088,7 @@ Viper_ANOVA = function(BCC_RNA_Data)
                  TopBottomQuarter_PurIST_Score_pVal = AOV_pVal, 
                  TopBottomQuarter_PurIST_Score_qVal = AOV_qVal)
   
-  # Write some reports that can go into supp data sets.
+  # Write some reports that could go into supp data sets.
   write.table(Report, 
               paste(AnalysisOutputPath, "Viper_ANOVA.tsv", sep=""), 
               sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
@@ -1172,8 +1096,8 @@ Viper_ANOVA = function(BCC_RNA_Data)
   return(Report)
 }
 
-# Example to generate viper regulon statistics used in Fig...
-# TestResult = Viper_ANOVA(BCC_RNA_Data)
+# Example to generate viper regulon statistics used to generate some figures.
+# ViperTestResult = Viper_ANOVA(BCC_RNA_Data)
 
 #= FormatInputForGSEA() ========================================================
 
@@ -1220,98 +1144,6 @@ FormatInputForGSEA = function(Data,
                   paste(rep(SetBName, times=length(SetB)), collapse="\t"), sep="\t")
   LineData = c(LineData, OneLine)
   writeLines(LineData, TmpFileName)
-}
-
-#= CacheEnsemblAnnotion() ======================================================
-
-CacheEnsemblAnnotion = function(RnaSeqData,
-                                SourcePath,
-                                Species = "human",
-                                Version = "Current")
-{
-  CachePath = paste(SourcePath, sep="")
-  CacheFile = paste("BioMartAnn_", Species, "_", Version, ".RData", sep="")
-  
-  Target_Ensembl_ID = rownames(RnaSeqData)
-  
-  # Remove ".version" numbers from Ensembl IDs if they are there.
-  temp = unlist(strsplit(Target_Ensembl_ID, split=".", fixed=TRUE))
-  if (length(temp) == 2*length(Target_Ensembl_ID))
-  {
-    idx = 2 * 1:length(Target_Ensembl_ID) - 1
-    Target_Ensembl_ID = temp[idx]
-  }
-  
-  if (length(list.files(CachePath, 
-                        pattern=paste("^", CacheFile, "$", sep=""))) == 1) 
-  {
-    load(paste(CachePath, CacheFile, sep=""))
-    
-    # Match the ensembl IDs RnaSeqData with the ensembl IDs
-    # of the annotation just loaded.
-    idx = match(x=Target_Ensembl_ID, table=EnsemblAnn[, "ensembl_gene_id"])
-    EnsemblAnn = EnsemblAnn[idx, ]
-    
-  } else
-  {
-    if (Version == "Current")
-    {
-      # Default, current version.
-      ensembl = useEnsembl(biomart="Ensembl", dataset="hsapiens_gene_ensembl")
-    } else
-    {
-      # Use listEnsemblArchives() for list of versions.
-      ensembl = useEnsembl(biomart="Ensembl", dataset="hsapiens_gene_ensembl", version=Version)
-    }
-    
-    if (!require("BiocManager", quietly = TRUE))
-      install.packages("BiocManager")
-    require("BiocManager", quietly = TRUE)
-    
-    if (!require("org.Hs.eg.db", quietly = TRUE))
-      BiocManager::install("org.Hs.eg.db")    # See listAttributes(ensembl)
-    require("org.Hs.eg.db", quietly = TRUE)
-    
-    if (!require("biomaRt", quietly = TRUE))
-      BiocManager::install("biomaRt")    # See listAttributes(ensembl)
-    require("biomaRt", quietly = TRUE)
-    
-    EnsemblAnnDB = getBM(attributes=c('entrezgene_id',
-                                      'ensembl_gene_id', 
-                                      'hgnc_symbol', # 'hgnc_symbol', 
-                                      # 'mgi_symbol'
-                                      'gene_biotype',
-                                      'chromosome_name', 
-                                      'start_position', 
-                                      'end_position'), 
-                         mart = ensembl)
-    
-    # This is needed to get nice gene descriptions...
-    # Some examples: 
-    # https://rdrr.io/bioc/GenomicFeatures/man/select-methods.html
-    #columns(org.Mm.eg.db)
-    # Note that this gives a 1:many mapping.
-    ExtraAnnDB = select(org.Hs.eg.db, Target_Ensembl_ID, 
-                        columns=c("ENSEMBL", "SYMBOL", "GENENAME"), 
-                        keytype="ENSEMBL")
-    
-    save(EnsemblAnnDB, ExtraAnnDB, 
-         file=paste(CachePath, CacheFile, sep=""))
-  }
-  
-  # Match the cleaned ensembl IDs from RnaSeqData with the ensembl IDs
-  # of the annotation just loaded.
-  idx = match(x=Target_Ensembl_ID, table=EnsemblAnnDB[, "ensembl_gene_id"])
-  EnsemblAnn = EnsemblAnnDB[idx, ]
-  
-  ExtraAnn = ExtraAnnDB[!duplicated(ExtraAnnDB$ENSEMBL), ]
-  dim(ExtraAnn)
-  idx = match(x=Target_Ensembl_ID, table=ExtraAnn[, "ENSEMBL"])
-  ExtraAnn = ExtraAnn[idx, ]
-  
-  return(list(Ensembl_ID = Target_Ensembl_ID,
-              EnsemblAnn = EnsemblAnn,
-              ExtraAnn = ExtraAnn))
 }
 
 #= END =========================================================================
