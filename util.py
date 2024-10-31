@@ -251,6 +251,18 @@ def open_write_excel(d_result_fig,filename='Source_Data_Figure3.xlsx'):
             for sheet_name, df in d_result_fig.items():
                 print(f'saving {sheet_name[0:30]}')
                 df.to_excel(writer, sheet_name=sheet_name[0:30])
+
+def excel_dict_from_csvs(s_find,s_prefix='ED_Fig2',s_dir='.'):
+    df = pd.DataFrame(sorted(os.listdir(s_dir)),columns=['Test'])
+    df_test = df[df.Test.str.contains(s_find)].copy()
+    df_test['Panel'] = [item.split(s_find)[1].split('.csv')[0] for item in df_test.Test]
+    df_test['Sheet'] = [f'{s_prefix}{item}' for item in df_test.Panel]
+    d_fig = {}
+    for ids, row in df_test.iterrows():
+        print(row.Test)
+        df_sheet = pd.read_csv(row.Test,index_col=0)
+        d_fig.update({row.Sheet:df_sheet})
+    return(d_fig)
     
 def get_blobs2(image_gray,min_sigma,max_sigma,threshold,exclude_border):
 
