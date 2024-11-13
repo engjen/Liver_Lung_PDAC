@@ -924,7 +924,10 @@ def plot_chi(df_all,s_clin,s_x_var,figsize=(4,4),alpha=0.05,annot=None):
     df_patient = df_all.loc[:,[s_clin,s_x_var]].dropna()
     crosstab = pd.crosstab(df_patient.loc[:,s_clin],df_patient.loc[:,s_x_var])
     df = crosstab.T.unstack().reset_index().rename({0:'Total Pts'},axis=1)
-    statistic,pvalue, dof, expected_freq = stats.chi2_contingency(crosstab)
+    if crosstab.shape == (2,2):
+        statistic,pvalue = stats.fisher_exact(crosstab)
+    else:
+        statistic,pvalue, dof, expected_freq = stats.chi2_contingency(crosstab)
     if pvalue < alpha:
         fig, ax = plt.subplots(figsize=figsize,dpi=300)
         if not annot is None:
@@ -1484,7 +1487,7 @@ def single_km_cat(df_all,s_col,savedir,alpha=0.05,s_time='Survival_time',s_censo
                 durations = df_abun.loc[:,s_time]
                 event_observed = df_abun.loc[:,s_censor]
                 try:
-                    kmf.fit(durations, event_observed,label=s_group)
+                    kmf.fit(durations, event_observed,label=str(s_group))
                     kmf.plot(ax=ax,ci_show=False,show_censors=True)
                 except:
                     results.summary.p[0] = 1
